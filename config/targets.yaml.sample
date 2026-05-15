@@ -1,0 +1,23 @@
+# /etc/eccube-fim/targets.yaml
+# Monitoring policy — which files to watch and when to suppress repeated alerts.
+
+deduplication:
+  # Option: suppress_window_hours
+  # Suppress repeated alerts for the same file+content within this window.
+  # Values: [ INTEGER ]  Default: 1
+  suppress_window_hours: 1
+
+target_files:
+  # --- Credit card input pages (highest priority) ---
+  - app/template/default/Shopping/index.twig
+  - app/template/default/Shopping/confirm.twig
+  - app/template/default/Shopping/complete.twig
+
+  # --- Site-wide layout ---
+  - app/template/default/default_frame.twig
+
+  # --- Important blocks ---
+  - app/template/default/Block/header.twig
+  - app/template/default/Block/footer.twig
+  - app/template/default/Cart/index.twig
+  - app/template/default/Mypage/login.twig

@@ -1,0 +1,20 @@
+# /etc/eccube-fim/daemon.yaml
+# System identity and runtime infrastructure.
+
+# Absolute path to the EC-CUBE document root (the git repo root).
+# Required — no default.
+root_path: /var/www/html
+
+# Option: state_db
+# SQLite file for notification dedup state.
+# Values: [ FILE ]  Default: /etc/eccube-fim/state.db
+state_db: /etc/eccube-fim/state.db
+
+heartbeat:
+  # Option: enabled
+  # Values: [ true | false ]  Default: true
+  enabled: true
+
+  # Option: file
+  # Values: [ FILE ]  Default: /var/run/eccube-fim/heartbeat
+  file: /var/run/eccube-fim/heartbeat

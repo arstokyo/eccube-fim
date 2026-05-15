@@ -1,0 +1,31 @@
+# /etc/eccube-fim/notify.yaml
+# Notification channels — who gets alerted and how.
+
+email:
+  # Required — no default.
+  smtp_host: smtp.example.com
+
+  # Option: smtp_port
+  # Values: [ INTEGER ]  Default: 587
+  smtp_port: 587
+
+  smtp_user: alert@example.com
+
+  # File containing the SMTP password. chmod 600 chown root:root.
+  smtp_password_file: /etc/eccube-fim/smtp.password
+
+  from: alert@example.com
+  recipients:
+    - admin@example.com
+    - security@example.com
+
+slack:
+  # Option: enabled
+  # Values: [ true | false ]  Default: false
+  enabled: false
+
+  # One file per Slack channel — each file holds one webhook URL.
+  # chmod 600 chown root:root on each file.
+  webhook_url_files:
+    - /etc/eccube-fim/slack-security.webhook
+    - /etc/eccube-fim/slack-ops.webhook
