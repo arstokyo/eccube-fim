@@ -16,7 +16,6 @@ log = logging.getLogger(__name__)
 
 def _check_target(path: str, changed: dict, cfg: Config, db: Db,
                   report: Optional[_Report]) -> Optional[dict]:
-    """Return detection dict for one target, or None if clean or suppressed."""
     status = changed.get(path, "")
     has_change = bool(status) and any(c in status for c in ("M", "D"))
     if report is not None:
@@ -26,19 +25,28 @@ def _check_target(path: str, changed: dict, cfg: Config, db: Db,
         return None
     log.warning("DETECTED: %s (status=%s)", path, status)
     diff = "(file deleted)" if "D" in status else git_diff(cfg.root_path, path)
-    # hash the diff, not the file — same change twice suppresses,
-    # different change re-alerts
     sha256 = hashlib.sha256(diff.encode()).hexdigest()
     suppressed = db.is_suppressed(path, sha256, cfg.suppress_window_hours)
     if report is not None:
-        window = f"{cfg.suppress_window_hours}h"
-        verdict = "suppressed" if suppressed else "NOT suppressed"
-        report.suppression_lines.append(
-            f"  {path}  sha256={sha256[:8]}...  window={window}  → {verdict}"
-        )
+        _add_suppression_report(report, path, sha256,
+                                cfg.suppress_window_hours, suppressed)
     if suppressed:
         log.info("Suppressed: %s", path)
         return None
+    return _detection(path, status, diff, sha256, cfg)
+
+
+def _add_suppression_report(report: _Report, path: str, sha256: str,
+                            hours: int, suppressed: bool) -> None:
+    window = f"{hours}h"
+    verdict = "suppressed" if suppressed else "NOT suppressed"
+    report.suppression_lines.append(
+        f"  {path}  sha256={sha256[:8]}...  window={window}  → {verdict}"
+    )
+
+
+def _detection(path: str, status: str, diff: str,
+               sha256: str, cfg: Config) -> dict:
     return {
         "path": path,
         "full_path": str(Path(cfg.root_path) / path),
@@ -52,11 +60,6 @@ def _check_target(path: str, changed: dict, cfg: Config, db: Db,
 
 def run_detection(cfg: Config, db: Db,
                   report: Optional[_Report] = None) -> list:
-    """Run git status and return list of unsuppressed detections.
-
-    report is populated as a side-effect when verbose mode is active —
-    capturing sha256 and suppression decisions in a single git pass.
-    """
     changed = git_status(cfg.root_path)
     log.debug("git status: %d changed entries", len(changed))
     results = []
@@ -101,8 +104,28 @@ def _populate_config_report(cfg: Config, channels: list, report: _Report) -> Non
     ]
 
 
+def _run_cycle(cfg: Config, db: Db, channels: list, dry_run: bool,
+               report: Optional[_Report]) -> int:
+    to_notify = run_detection(cfg, db, report)
+    if not to_notify:
+        log.info("No new alerts")
+        return 0
+    ok = _notify_and_record(channels, socket.gethostname(),
+                            to_notify, dry_run, db, report)
+    return 0 if ok else 1
+
+
+def _finish_cycle(cfg: Config, db: Db, report: Optional[_Report]) -> None:
+    db.close()
+    write_heartbeat(cfg)
+    if report is not None:
+        report.heartbeat_line = (
+            f"  Written: {cfg.heartbeat_file}"
+            if cfg.heartbeat_enabled else "  (disabled)"
+        )
+
+
 def run(cfg: Config, dry_run: bool = False, verbose: bool = False) -> int:
-    """Run one detection cycle. Return 0 on success, 1 on any error."""
     log.info("eccube-fim check start (dry_run=%s)", dry_run)
     report = _Report() if verbose else None
     channels = build_channels(cfg)
@@ -113,26 +136,13 @@ def run(cfg: Config, dry_run: bool = False, verbose: bool = False) -> int:
     except Exception as e:
         log.error("DB error: %s", e)
         return 1
-    exit_code = 0
     try:
-        to_notify = run_detection(cfg, db, report)
-        if to_notify:
-            ok = _notify_and_record(channels, socket.gethostname(),
-                                    to_notify, dry_run, db, report)
-            exit_code = 0 if ok else 1
-        else:
-            log.info("No new alerts")
+        exit_code = _run_cycle(cfg, db, channels, dry_run, report)
     except Exception as e:
         log.error("Detection error: %s", e)
         exit_code = 1
     finally:
-        db.close()            # Db owns the connection; must close even on exception
-        write_heartbeat(cfg)  # must always update; external monitor alerts if stale
-        if report is not None:
-            report.heartbeat_line = (
-                f"  Written: {cfg.heartbeat_file}"
-                if cfg.heartbeat_enabled else "  (disabled)"
-            )
+        _finish_cycle(cfg, db, report)
     if report is not None:
         print_verbose_report(report)
     log.info("eccube-fim check done")
