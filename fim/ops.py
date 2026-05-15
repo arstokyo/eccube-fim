@@ -72,7 +72,10 @@ def send_test_mail(cfg: Config) -> int:
         "sha256": "",
     }
     try:
-        EmailChannel(cfg.email).send(socket.gethostname(), detection)
+        ok = EmailChannel(cfg.email).send(socket.gethostname(), detection)
+        if not ok:
+            print("FAILED: email send failed", file=sys.stderr)
+            return 1
     except Exception as e:
         log.error("Test email failed: %s", e)
         print(f"FAILED: {e}", file=sys.stderr)
