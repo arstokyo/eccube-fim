@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Runtime state (never commit)
+*.db
+*.db-journal
+
+# Secrets
+smtp.password
+slack.webhook
+
+# Reference repos (local study only, not part of source)
+refs/
+
+# Original spec (reference only, not part of source)
+docs/original-spec.md
+
+# Local planning and issue tracking (private, not part of source)
+plans/
+issues/
+
+# Claude Code local config and instructions
+.claude/
+CLAUDE.md
