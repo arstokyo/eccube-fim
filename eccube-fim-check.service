@@ -1,0 +1,26 @@
+[Unit]
+Description=EC-CUBE File Integrity Monitoring Check
+Documentation=https://example.com/runbook/fim
+RequiresMountsFor=/var/www/html
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/eccube-fim check
+User=root
+Group=root
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=eccube-fim
+
+ProtectSystem=strict
+ReadOnlyPaths=/var/www/html
+ReadWritePaths=/var/log/eccube-fim /var/run/eccube-fim /etc/eccube-fim/state.db
+NoNewPrivileges=true
+ProtectHome=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+PrivateTmp=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+MemoryMax=256M
+CPUQuota=50%
+TimeoutStartSec=120
