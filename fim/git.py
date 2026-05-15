@@ -13,10 +13,15 @@ _GIT_DIFF_TIMEOUT   = 30
 _GIT_DIFF_MAX_LINES = 50
 
 
+def _safe_dir_flag(root_path: str) -> list:
+    # per-invocation override; avoids writing to /etc/gitconfig system-wide
+    return ["-c", f"safe.directory={root_path}"]
+
+
 def git_status(root_path: str) -> dict:
     """Return porcelain status map {relative_path: xy_code} for the repo."""
     r = subprocess.run(
-        ["git", "status", "--porcelain"],
+        ["git", *_safe_dir_flag(root_path), "status", "--porcelain"],
         cwd=root_path, capture_output=True, text=True, timeout=_GIT_STATUS_TIMEOUT,
     )
     if r.returncode != 0:
@@ -36,7 +41,7 @@ def git_status(root_path: str) -> dict:
 def git_diff(root_path: str, filepath: str,
              max_lines: int = _GIT_DIFF_MAX_LINES) -> str:
     r = subprocess.run(
-        ["git", "diff", "HEAD", "--", filepath],
+        ["git", *_safe_dir_flag(root_path), "diff", "HEAD", "--", filepath],
         cwd=root_path, capture_output=True, text=True, timeout=_GIT_DIFF_TIMEOUT,
     )
     lines = r.stdout.splitlines()

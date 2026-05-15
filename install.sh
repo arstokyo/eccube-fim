@@ -124,19 +124,6 @@ secure_git_dir() {
     fi
 }
 
-configure_git_safe_directory() {
-    # Git 2.35+ refuses to run when the worktree owner differs from the process
-    # user unless the path is listed in safe.directory. The systemd service runs
-    # as root with ProtectHome=true, so root's ~/.gitconfig is hidden — a
-    # system-level entry is the only location visible to the sandboxed service.
-    if git config --system --get-all safe.directory 2>/dev/null | grep -qxF "$ECCUBE_ROOT"; then
-        info "safe.directory already set for $ECCUBE_ROOT"
-        return
-    fi
-    git config --system --add safe.directory "$ECCUBE_ROOT"
-    info "Added safe.directory = $ECCUBE_ROOT (fixes Git dubious ownership in systemd)"
-}
-
 warn_uncommitted_changes() {
     if ! git -C "$ECCUBE_ROOT" status --porcelain 2>/dev/null | grep -qE '^[MD]'; then
         return
@@ -169,7 +156,6 @@ main() {
     install_cli
     install_config_samples
     secure_git_dir
-    configure_git_safe_directory
     warn_uncommitted_changes
     install_systemd_units
     install_logrotate
