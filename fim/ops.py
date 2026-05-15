@@ -19,11 +19,15 @@ def _print_targets_table(cfg: Config) -> bool:
     print("-" * 74)
     all_ok = True
     for path in cfg.target_files:
-        r = subprocess.run(
-            ["git", "ls-files", "--error-unmatch", path],
-            cwd=cfg.root_path, capture_output=True,
-        )
-        tracked = r.returncode == 0
+        try:
+            r = subprocess.run(
+                ["git", "ls-files", "--error-unmatch", path],
+                cwd=cfg.root_path, capture_output=True,
+            )
+            tracked = r.returncode == 0
+        except OSError:
+            # root_path does not exist or is not accessible
+            tracked = False
         if not tracked:
             all_ok = False
         status = "tracked" if tracked else "NOT IN GIT"
