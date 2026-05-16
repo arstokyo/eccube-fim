@@ -428,7 +428,46 @@ update_mode() {
     _read_interval_from_timer
     install_systemd_files
     systemctl restart eccube-fim-check.timer
-    info "Update complete"
+}
+
+# ---------------------------------------------------------------------------
+# Post-install verification offer
+# ---------------------------------------------------------------------------
+post_install_checks() {
+    echo
+    if [ "$NONINTERACTIVE" -eq 1 ]; then
+        info "Next: eccube-fim validate"
+        info "Next: eccube-fim test-mail"
+        info "Finished."
+        return
+    fi
+
+    # empty Enter → variable is "", which is != "n", so default is Y
+    local run_validate
+
+    if ! command -v eccube-fim >/dev/null 2>&1; then
+        warn "eccube-fim not found in PATH — run 'eccube-fim validate' and 'eccube-fim test-mail' manually"
+        info "Finished."
+        return
+    fi
+
+    read -rp "Run 'eccube-fim validate' now? [Y/n]: " run_validate </dev/tty
+    if [ "${run_validate,,}" != "n" ]; then
+        echo
+        if eccube-fim validate; then
+            local run_testmail
+            read -rp "Send test email via 'eccube-fim test-mail' now? [Y/n]: " run_testmail </dev/tty
+            if [ "${run_testmail,,}" != "n" ]; then
+                echo
+                eccube-fim test-mail || warn "test-mail failed — check notify.yaml and SMTP credentials"
+            fi
+        else
+            warn "validate failed — fix config before running test-mail"
+        fi
+    fi
+
+    echo
+    info "Finished."
 }
 
 # ---------------------------------------------------------------------------
@@ -444,7 +483,8 @@ main() {
         info "EC-CUBE FIM installer (version: ${VERSION}, OS: ${OS_ID})"
         install_packages
         update_mode
-        info "Run: eccube-fim validate"
+        info "Update complete"
+        post_install_checks
         return
     fi
 
@@ -462,8 +502,7 @@ main() {
     install_systemd_files
     activate_systemd_units
     info "Install complete"
-    info "Run: eccube-fim validate"
-    info "Run: eccube-fim test-mail"
+    post_install_checks
 }
 
 main "$@"
