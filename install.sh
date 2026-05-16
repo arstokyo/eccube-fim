@@ -161,7 +161,9 @@ create_directories() {
         chmod 700 "$dir"
         chown root:root "$dir"
     done
-    # LIB_DIR needs 755 so Python can import from it
+    mkdir -p "$LIB_DIR"
+    chmod 755 "$LIB_DIR"
+    chown root:root "$LIB_DIR"
 }
 
 setup_tmpfiles() {
