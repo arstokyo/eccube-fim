@@ -11,9 +11,19 @@ DEFAULT_HEARTBEAT_FILE  = "/run/eccube-fim/heartbeat"
 DEFAULT_SMTP_PORT       = 587
 DEFAULT_SUPPRESS_HOURS  = 1
 
+# Install paths — must match install.sh constants exactly
+INSTALL_SBIN_DIR        = "/usr/local/sbin"
+INSTALL_LIB_DIR         = "/usr/local/lib/eccube-fim"
+INSTALL_SYSTEMD_DIR     = "/etc/systemd/system"
+INSTALL_LOGROTATE_PATH  = "/etc/logrotate.d/eccube-fim"
+INSTALL_TMPFILES_PATH   = "/etc/tmpfiles.d/eccube-fim.conf"
+INSTALL_TIMER_NAME      = "eccube-fim-check.timer"
+INSTALL_SERVICE_NAME    = "eccube-fim-check.service"
+
 
 @dataclass
 class NotifyEmail:
+    """SMTP notification channel configuration."""
     smtp_host: str
     smtp_port: int = DEFAULT_SMTP_PORT
     smtp_user: str = ""
@@ -24,6 +34,7 @@ class NotifyEmail:
 
 @dataclass
 class NotifySlack:
+    """Slack notification channel configuration."""
     enabled: bool = False
     webhook_url_files: list = field(default_factory=list)
 

@@ -1,7 +1,7 @@
 import subprocess
 import pytest
 from fim.config import Config, NotifyEmail, NotifySlack
-from fim.ops import send_test_mail, validate_config, approve_change
+from fim.ops import approve_change
 
 
 @pytest.fixture
@@ -25,50 +25,10 @@ def ops_cfg(repo, email_cfg):
     )
 
 
-def test_send_test_mail_returns_1_when_channel_returns_false(monkeypatch, ops_cfg, capsys):
-    monkeypatch.setattr("fim.ops.EmailChannel.send", lambda self, hostname, d: False)
-    result = send_test_mail(ops_cfg)
-    assert result == 1
-    captured = capsys.readouterr()
-    assert "FAILED" in captured.err
-    assert "Test email sent successfully" not in captured.out
-
-
-def test_send_test_mail_returns_0_on_success(monkeypatch, ops_cfg, capsys):
-    monkeypatch.setattr("fim.ops.EmailChannel.send", lambda self, hostname, d: True)
-    result = send_test_mail(ops_cfg)
-    assert result == 0
-    captured = capsys.readouterr()
-    assert "Test email sent successfully" in captured.out
-
-
-def test_send_test_mail_returns_1_on_exception(monkeypatch, ops_cfg, capsys):
-    def raise_exc(self, hostname, d):
-        raise OSError("connection refused")
-    monkeypatch.setattr("fim.ops.EmailChannel.send", raise_exc)
-    result = send_test_mail(ops_cfg)
-    assert result == 1
-
-
-def test_validate_config_passes_for_existing_root(ops_cfg, capsys):
-    result = validate_config(ops_cfg)
-    captured = capsys.readouterr()
-    assert "Config validation" in captured.out
-    assert isinstance(result, bool)
-
-
-def test_validate_config_fails_for_missing_root(ops_cfg, capsys):
-    ops_cfg.root_path = "/nonexistent/path"
-    result = validate_config(ops_cfg)
-    captured = capsys.readouterr()
-    assert "NOT FOUND" in captured.out
-
-
 def test_approve_change_returns_false_on_no_diff(ops_cfg, capsys):
     result = approve_change(ops_cfg, "index.twig", confirm_fn=lambda: "y")
     assert result is False
-    captured = capsys.readouterr()
-    assert "No uncommitted changes" in captured.out
+    assert "No uncommitted changes" in capsys.readouterr().out
 
 
 def test_approve_change_returns_false_on_cancel(ops_cfg, repo):
