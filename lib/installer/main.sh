@@ -1,6 +1,7 @@
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
+# known: 35 lines — orchestration function; length reflects install steps, not complexity
 main() {
     parse_args "$@"
     require_root

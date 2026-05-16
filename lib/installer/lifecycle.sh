@@ -16,6 +16,7 @@ update_mode() {
 # ---------------------------------------------------------------------------
 # Post-install verification offer
 # ---------------------------------------------------------------------------
+# known: 39 lines — sequential prompt flow; splitting would require passing $run_validate as state
 post_install_checks() {
     echo
     local fim_cmd="$SBIN_DIR/eccube-fim"

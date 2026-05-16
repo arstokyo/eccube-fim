@@ -1,6 +1,9 @@
 # ---------------------------------------------------------------------------
 # Interactive wizard
 # ---------------------------------------------------------------------------
+# known: 167 lines — bash has no module system; all write_* functions belong here
+
+_secure_file() { chmod 600 "$1"; chown root:root "$1"; }
 
 # prompt VAR_NAME "Label" "default" [secret]
 # Non-interactive: reads from env var $VAR_NAME; aborts if required and unset.
@@ -66,7 +69,7 @@ prompt_slack() {
         [ -z "$wh" ] && break
         local wh_file="$CONFIG_DIR/slack-${i}.webhook"
         printf '%s' "$wh" > "$wh_file"
-        chmod 600 "$wh_file"; chown root:root "$wh_file"
+        _secure_file "$wh_file"
         SLACK_WEBHOOKS+=("$wh_file")
         i=$((i + 1))
     done
@@ -81,7 +84,7 @@ heartbeat:
   enabled: true
   file: $RUN_DIR/heartbeat
 EOF
-    chmod 600 "$CONFIG_DIR/daemon.yaml"; chown root:root "$CONFIG_DIR/daemon.yaml"
+    _secure_file "$CONFIG_DIR/daemon.yaml"
     info "Written $CONFIG_DIR/daemon.yaml"
 }
 
@@ -92,7 +95,7 @@ write_targets_yaml() {
         return
     fi
     cp "$SRC_DIR/config/targets.yaml.sample" "$f"
-    chmod 600 "$f"; chown root:root "$f"
+    _secure_file "$f"
     info "Written $f"
 }
 
@@ -122,13 +125,13 @@ slack:
   webhook_url_files:
 ${slack_files_yaml}
 EOF
-    chmod 600 "$CONFIG_DIR/notify.yaml"; chown root:root "$CONFIG_DIR/notify.yaml"
+    _secure_file "$CONFIG_DIR/notify.yaml"
     info "Written $CONFIG_DIR/notify.yaml"
 }
 
 write_smtp_password() {
     printf '%s' "$SMTP_PASSWORD" > "$CONFIG_DIR/smtp.password"
-    chmod 600 "$CONFIG_DIR/smtp.password"; chown root:root "$CONFIG_DIR/smtp.password"
+    _secure_file "$CONFIG_DIR/smtp.password"
     info "Written $CONFIG_DIR/smtp.password"
 }
 

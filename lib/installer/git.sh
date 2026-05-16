@@ -42,6 +42,7 @@ EOF
     info "post-merge hook installed: $hook_path"
 }
 
+# known: 53 lines — body is sequential warn output; no extractable logic
 _warn_root_ssh() {
     local remote_url
     remote_url=$(git -c "safe.directory=$ECCUBE_ROOT" \
