@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Rebuild install.sh if any lib/installer/*.sh fragment or build.sh is staged.
+set -euo pipefail
+
+if git diff --cached --name-only | grep -qE "^lib/installer/|^build\.sh"; then
+    echo "[pre-commit] lib/installer/ changed — rebuilding install.sh"
+    ./build.sh >/dev/null
+    git add install.sh
+fi

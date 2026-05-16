@@ -51,3 +51,18 @@ Supported OS: Oracle Linux 9, RHEL 9, Ubuntu 24.04, openSUSE Leap 15, Arch Linux
 | Change SMTP or root path | `curl -fsSL https://raw.githubusercontent.com/arstokyo/eccube-fim/main/install.sh \| sudo bash -s -- --reconfigure` |
 
 Monitored files are listed in `/etc/eccube-fim/targets.yaml`. Edit that file to add or remove files — no reinstall needed.
+
+---
+
+## Development setup
+
+After cloning, run once to install the pre-commit hook:
+
+```bash
+./scripts/install-hooks.sh
+```
+
+The hook auto-rebuilds `install.sh` whenever `lib/installer/*.sh` or `build.sh`
+is staged, so you never need to run `./build.sh` manually.
+
+To edit the installer, change the relevant file under `lib/installer/` and commit — the hook handles the rest.

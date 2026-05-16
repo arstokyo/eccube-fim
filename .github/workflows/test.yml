@@ -1,0 +1,45 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: pytest (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: pip install pyyaml pytest
+
+      - name: Run tests
+        run: pytest tests/ -v
+
+  installer:
+    name: Installer integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Syntax-check all shell files
+        run: |
+          for f in install.sh build.sh lib/installer/*.sh; do
+            bash -n "$f" && echo "OK: $f"
+          done
+
+      - name: Verify install.sh matches build output
+        run: |
+          ./build.sh
+          git diff --exit-code install.sh
