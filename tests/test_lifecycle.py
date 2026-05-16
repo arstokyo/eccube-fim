@@ -3,7 +3,8 @@ import shutil
 import sys
 import tarfile
 import pytest
-from fim.lifecycle import uninstall, upgrade
+from fim.lifecycle import uninstall
+from fim.upgrade import upgrade
 
 
 @pytest.fixture
@@ -66,9 +67,31 @@ def test_upgrade_fails_when_not_root(monkeypatch, capsys):
     assert "root" in capsys.readouterr().err
 
 
+def test_upgrade_errors_on_api_failure(monkeypatch, capsys):
+    monkeypatch.setattr("os.geteuid", lambda: 0)
+
+    def _fail():
+        raise RuntimeError("Could not reach GitHub releases API: timeout")
+
+    monkeypatch.setattr("fim.upgrade._fetch_release_info", _fail)
+    assert upgrade(yes=True) == 1
+    assert "Error" in capsys.readouterr().err
+
+
+def test_upgrade_errors_on_incompatible_python(monkeypatch, capsys):
+    monkeypatch.setattr("os.geteuid", lambda: 0)
+    monkeypatch.setattr("fim.upgrade._fetch_release_info",
+                        lambda: ("v2.0.0", ">=99.0"))
+    with pytest.raises(SystemExit) as exc:
+        upgrade(yes=True)
+    assert exc.value.code == 1
+    assert "Python 99.0+" in capsys.readouterr().err
+
+
 def test_upgrade_cancels_on_no(monkeypatch, capsys):
     monkeypatch.setattr("os.geteuid", lambda: 0)
-    monkeypatch.setattr("fim.lifecycle._resolve_latest_tag", lambda: "v1.2.3")
+    monkeypatch.setattr("fim.upgrade._fetch_release_info",
+                        lambda: ("v1.2.3", ">=3.9"))
     monkeypatch.setattr("builtins.input", lambda _: "n")
     assert upgrade(yes=False) == 1
     assert "Cancelled" in capsys.readouterr().out
@@ -100,10 +123,11 @@ def test_upgrade_replaces_files(monkeypatch, tmp_path):
     sbin_dir.mkdir()
 
     monkeypatch.setattr("os.geteuid", lambda: 0)
-    monkeypatch.setattr("fim.lifecycle._resolve_latest_tag", lambda: "v1.2.3")
-    monkeypatch.setattr("fim.lifecycle._download_tarball", fake_download)
-    monkeypatch.setattr("fim.lifecycle.INSTALL_LIB_DIR",  str(lib_dir))
-    monkeypatch.setattr("fim.lifecycle.INSTALL_SBIN_DIR", str(sbin_dir))
+    monkeypatch.setattr("fim.upgrade._fetch_release_info",
+                        lambda: ("v1.2.3", ">=3.9"))
+    monkeypatch.setattr("fim.upgrade._download_tarball", fake_download)
+    monkeypatch.setattr("fim.upgrade.INSTALL_LIB_DIR",  str(lib_dir))
+    monkeypatch.setattr("fim.upgrade.INSTALL_SBIN_DIR", str(sbin_dir))
 
     assert upgrade(yes=True) == 0
     assert (lib_dir / "fim" / "cli.py").read_text() == "# updated"

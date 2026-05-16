@@ -34,7 +34,7 @@ def _cmd_approve(args: argparse.Namespace, cfg: Config) -> int:
 
 
 def _cmd_upgrade(args: argparse.Namespace, cfg: Optional[Config]) -> int:
-    from fim.lifecycle import upgrade
+    from fim.upgrade import upgrade
     return upgrade(yes=args.yes)
 
 

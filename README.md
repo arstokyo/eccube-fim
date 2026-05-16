@@ -22,8 +22,8 @@ The installer will ask for:
 After install, verify everything works:
 
 ```bash
-eccube-fim test --validate
-eccube-fim test --send-test-mail
+eccube-fim validate
+eccube-fim test-mail
 ```
 
 ---
@@ -47,7 +47,7 @@ Supported OS: Oracle Linux 9, RHEL 9, Ubuntu 24.04, openSUSE Leap 15, Arch Linux
 | View recent alerts | `journalctl -u eccube-fim-check -n 50` |
 | Run a manual check now | `eccube-fim check` |
 | Approve a legitimate change | `eccube-fim approve <file> --message "reason"` |
-| Update to latest version | `curl -fsSL https://raw.githubusercontent.com/arstokyo/eccube-fim/main/install.sh \| sudo bash -s -- --update` |
+| Update to latest version | `sudo eccube-fim upgrade` |
 | Change SMTP or root path | `curl -fsSL https://raw.githubusercontent.com/arstokyo/eccube-fim/main/install.sh \| sudo bash -s -- --reconfigure` |
 
 Monitored files are listed in `/etc/eccube-fim/targets.yaml`. Edit that file to add or remove files — no reinstall needed.

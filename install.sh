@@ -16,7 +16,8 @@ RELEASES_API="https://api.github.com/repos/${REPO_SLUG}/releases/latest"
 NONINTERACTIVE=0
 RECONFIGURE=0
 UPDATE=0
-VERSION=""   # set by fetch_source() after resolving latest release
+VERSION=""          # set by _fetch_release_info()
+PYTHON_REQUIRES=""  # set by _fetch_release_info()
 SRC_DIR=""
 
 # ---------------------------------------------------------------------------
@@ -77,13 +78,46 @@ configure_os() {
 }
 
 # ---------------------------------------------------------------------------
-# Source fetch — latest GitHub Release, fall back to main
+# Source fetch — latest GitHub Release only; errors on network failure
 # ---------------------------------------------------------------------------
-_resolve_version() {
-    # Returns the latest release tag, or "main" if no releases exist yet
-    local tag
-    tag=$(curl -fsSL "$RELEASES_API" 2>/dev/null | grep '"tag_name"' | cut -d'"' -f4)
-    echo "${tag:-main}"
+_fetch_release_info() {
+    local response
+    response=$(curl -fsSL "$RELEASES_API" 2>/dev/null) || true
+    VERSION=$(echo "$response" | grep '"tag_name"' | cut -d'"' -f4)
+    if [ -z "$VERSION" ]; then
+        error "Could not resolve latest release."
+        error "Check your network or visit: https://github.com/${REPO_SLUG}/releases"
+        exit 1
+    fi
+    PYTHON_REQUIRES=$(echo "$response" | python3 -c "
+import json, sys, re
+try:
+    data = json.load(sys.stdin)
+    body = data.get('body', '')
+    m = re.search(r'python_requires:\s*\"(.*?)\"', body)
+    print(m.group(1) if m else '')
+except Exception:
+    print('')
+" 2>/dev/null || echo "")
+}
+
+_check_python_requires() {
+    local requires="$1"
+    [ -z "$requires" ] && return
+    python3 -c "
+import sys, re
+requires = '${requires}'
+min_ver = tuple(int(x) for x in re.sub(r'^[>=]+', '', requires).split('.'))
+actual  = sys.version_info[:len(min_ver)]
+if actual < min_ver:
+    needed  = '.'.join(str(x) for x in min_ver)
+    running = f'{sys.version_info.major}.{sys.version_info.minor}'
+    print(f'ERROR: This release requires Python {needed}+ (found Python {running}).',
+          file=sys.stderr)
+    print('You are already on the latest version compatible with your Python.',
+          file=sys.stderr)
+    sys.exit(1)
+" || exit 1
 }
 
 fetch_source() {
@@ -95,18 +129,14 @@ fetch_source() {
         info "Using local source: $SRC_DIR"
         return
     fi
-    VERSION=$(_resolve_version)
+    _fetch_release_info
+    _check_python_requires "$PYTHON_REQUIRES"
     info "Downloading eccube-fim (${VERSION})..."
     SRC_DIR="$(mktemp -d)"
     # shellcheck disable=SC2064
     trap "rm -rf '$SRC_DIR'" EXIT
-    local url
-    if [ "$VERSION" = "main" ]; then
-        url="${REPO}/archive/refs/heads/main.tar.gz"
-    else
-        url="${REPO}/archive/refs/tags/${VERSION}.tar.gz"
-    fi
-    curl -fsSL "$url" | tar xz --strip-components=1 -C "$SRC_DIR"
+    curl -fsSL "${REPO}/archive/refs/tags/${VERSION}.tar.gz" \
+        | tar xz --strip-components=1 -C "$SRC_DIR"
     info "Source ready: eccube-fim ${VERSION}"
 }
 
@@ -404,7 +434,7 @@ main() {
         info "EC-CUBE FIM installer (version: ${VERSION}, OS: ${OS_ID})"
         install_packages
         update_mode
-        info "Run: eccube-fim test --validate"
+        info "Run: eccube-fim validate"
         return
     fi
 
@@ -422,8 +452,8 @@ main() {
     install_systemd_files
     activate_systemd_units
     info "Install complete"
-    info "Run: eccube-fim test --validate"
-    info "Run: eccube-fim test --send-test-mail"
+    info "Run: eccube-fim validate"
+    info "Run: eccube-fim test-mail"
 }
 
 main "$@"
