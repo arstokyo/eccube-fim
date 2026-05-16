@@ -40,29 +40,13 @@ fail with `Permission denied` on `.git`.
 ## What happens after git pull
 
 The installer places a post-merge hook at `.git/hooks/post-merge` (owned by
-root, mode 700). After every successful `git pull`, the hook automatically
-restores web-user ownership on the EC-CUBE writable directories:
+root, mode 700). After every successful `git pull`, the hook runs two steps:
 
-| Directory | Purpose |
-|-----------|---------|
-| `var/` | cache, logs, sessions — written by PHP |
-| `html/upload/` | user file uploads |
-| `app/Plugin/` | installed plugin code |
-| `app/PluginData/` | plugin runtime data |
-
-The hook only chowns directories that already exist, so it is safe to run
-against any EC-CUBE version.
-
-## If you add a new writable directory
-
-If a customisation introduces a directory that PHP must write to (e.g.
-`var/myplugin/`), add it to the hook:
-
-```bash
-sudo vi /var/www/html/.git/hooks/post-merge
-# add inside the for-loop or append:
-#   [ -d "$ECCUBE_ROOT/var/myplugin" ] && chown -R "$WEB_USER:$WEB_USER" "$ECCUBE_ROOT/var/myplugin"
-```
+1. `chown -R $WEB_USER:$WEB_USER $ECCUBE_ROOT` — restores web-user ownership
+   on every file and directory in the working tree so Apache and PHP-FPM can
+   read (and write where needed) all files regardless of umask or SELinux context.
+2. `chown -R root:root $ECCUBE_ROOT/.git && chmod -R go-rwx $ECCUBE_ROOT/.git`
+   — immediately re-secures `.git` so only root can access it.
 
 ## Verifying ownership after a pull
 
