@@ -17,9 +17,6 @@ This prevents the web user (`apache` / `www-data`) from reading or writing
 to hide a tampered file. The FIM daemon (running as root) can still run
 `git diff` to detect changes.
 
-Source files (`.php`, `.twig`, etc.) remain `root:root 644` after every pull.
-Apache can read them but cannot modify them — this is intentional.
-
 ## How to deploy (git pull)
 
 Because `.git` is root-only, all `git pull` commands must run as root:
