@@ -22,7 +22,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: pip install pyyaml pytest
+        run: pip install "pyyaml>=6,<7" "pytest>=8,<9"
 
       - name: Run tests
         run: pytest tests/ -v
@@ -36,7 +36,8 @@ jobs:
       - name: Syntax-check all shell files
         run: |
           for f in install.sh build.sh lib/installer/*.sh; do
-            bash -n "$f" && echo "OK: $f"
+            bash -n "$f"
+            echo "OK: $f"
           done
 
       - name: Verify install.sh matches build output
