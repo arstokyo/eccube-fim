@@ -252,9 +252,11 @@ prompt_slack() {
     info "=== Slack alerts (optional) ==="
     SLACK_ENABLED=false
     SLACK_WEBHOOKS=()
-    [ "$NONINTERACTIVE" -eq 1 ] && return
+    [ "$NONINTERACTIVE" -eq 1 ] && return 0
     read -rp "Enable Slack notifications? [y/N]: " yn
-    [ "${yn,,}" = "y" ] || return
+    if [ "${yn,,}" != "y" ]; then
+        return 0
+    fi
     SLACK_ENABLED=true
     local i=1
     while true; do
