@@ -216,15 +216,11 @@ prompt() {
     fi
     local display_label="$label"
     [ -n "$default" ] && display_label="$label [$default]"
-    # when piped (curl|bash), stdin is the pipe; read from /dev/tty so prompts
-    # reach the user's terminal regardless of how the script was invoked
-    local tty_in=""
-    [ -t 0 ] || tty_in="/dev/tty"
     local input=""
     if [ -n "$secret" ]; then
-        read -rsp "${display_label}: " input ${tty_in:+<"$tty_in"}; echo
+        read -rsp "${display_label}: " input; echo
     else
-        read -rp "${display_label}: " input ${tty_in:+<"$tty_in"}
+        read -rp "${display_label}: " input
     fi
     printf -v "$var" '%s' "${input:-$default}"
 }
@@ -257,15 +253,13 @@ prompt_slack() {
     SLACK_ENABLED=false
     SLACK_WEBHOOKS=()
     [ "$NONINTERACTIVE" -eq 1 ] && return
-    local tty_in=""
-    [ -t 0 ] || tty_in="/dev/tty"
-    read -rp "Enable Slack notifications? [y/N]: " yn ${tty_in:+<"$tty_in"}
+    read -rp "Enable Slack notifications? [y/N]: " yn
     [ "${yn,,}" = "y" ] || return
     SLACK_ENABLED=true
     local i=1
     while true; do
         local wh=""
-        read -rp "Slack webhook URL $i (empty to stop): " wh ${tty_in:+<"$tty_in"}
+        read -rp "Slack webhook URL $i (empty to stop): " wh
         [ -z "$wh" ] && break
         local wh_file="$CONFIG_DIR/slack-${i}.webhook"
         printf '%s' "$wh" > "$wh_file"
@@ -353,12 +347,11 @@ wizard() {
         _read_interval_from_timer
         return
     fi
-    # prompt() redirects read to /dev/tty when piped; abort only if no terminal
-    # is available at all (CI, container with no controlling tty)
-    if [ ! -t 0 ] && [ ! -c /dev/tty ]; then
-        error "No terminal available — cannot run interactive wizard."
-        error "Use --non-interactive with env vars, or run directly: sudo bash install.sh"
-        exit 1
+    # curl|bash: stdin is the pipe carrying the script, not the terminal.
+    # Re-open stdin from /dev/tty so all subsequent read calls reach the operator.
+    if [ ! -t 0 ]; then
+        [ -c /dev/tty ] || { error "No terminal available — use --non-interactive or run directly: sudo bash install.sh"; exit 1; }
+        exec 0</dev/tty
     fi
     prompt_infra
     prompt_email
