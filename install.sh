@@ -143,10 +143,24 @@ fetch_source() {
 # ---------------------------------------------------------------------------
 # Package + directory setup
 # ---------------------------------------------------------------------------
+_check_sshd_health() {
+    # sshd -t validates both config and OpenSSL ABI linkage
+    if ! sshd -t >/dev/null 2>&1; then
+        error "sshd validation failed after package install — do NOT disconnect this session"
+        error "Recovery: dnf update openssh openssh-server -y && systemctl restart sshd"
+        error "Verify  : sshd -t && ss -tlnp | grep :22"
+        exit 1
+    fi
+}
+
 install_packages() {
     info "Installing packages with $PKG_MGR"
     case "$PKG_MGR" in
-        dnf)     dnf install -y python3 "$PYYAML_PKG" git ;;
+        dnf)
+            warn "Keep a second SSH session open — package operations may update OpenSSL"
+            dnf install -y --setopt=install_weak_deps=False python3 "$PYYAML_PKG" git
+            _check_sshd_health
+            ;;
         apt-get) apt-get update -qq
                  apt-get install -y --no-install-recommends python3 "$PYYAML_PKG" git ;;
         zypper)  zypper install -y python3 "$PYYAML_PKG" git ;;
