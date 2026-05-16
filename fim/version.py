@@ -5,7 +5,8 @@ from pathlib import Path
 from typing import Optional
 
 __version__ = "1.0.0"
-VERSION_CHECK_URL   = "https://api.github.com/repos/arstokyo/eccube-fim/releases/latest"
+REPO_SLUG         = "arstokyo/eccube-fim"
+VERSION_CHECK_URL = f"https://api.github.com/repos/{REPO_SLUG}/releases/latest"
 # /run is tmpfs on systemd; stamp disappears after reboot — forces a fresh check after restart
 VERSION_CHECK_STAMP = "/var/run/eccube-fim/version_check"
 

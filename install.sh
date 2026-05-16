@@ -9,8 +9,9 @@ CONFIG_DIR=/etc/eccube-fim
 LOG_DIR=/var/log/eccube-fim
 RUN_DIR=/var/run/eccube-fim
 
-REPO="https://github.com/arstokyo/eccube-fim"
-RELEASES_API="https://api.github.com/repos/arstokyo/eccube-fim/releases/latest"
+REPO_SLUG="arstokyo/eccube-fim"
+REPO="https://github.com/${REPO_SLUG}"
+RELEASES_API="https://api.github.com/repos/${REPO_SLUG}/releases/latest"
 
 NONINTERACTIVE=0
 RECONFIGURE=0
