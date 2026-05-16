@@ -4,6 +4,7 @@ import urllib.request
 from pathlib import Path
 
 from fim.config import NotifySlack
+from fim.template import render_body
 
 log = logging.getLogger(__name__)
 
@@ -22,12 +23,13 @@ class SlackChannel:
             return False
         results = []
         for wh_file in self._cfg.webhook_url_files:
-            if not Path(wh_file).exists():
+            p = Path(wh_file)
+            if not p.exists():
                 log.warning("Slack webhook file not found: %s", wh_file)
                 results.append(False)
                 continue
             try:
-                webhook = Path(wh_file).read_text(encoding="utf-8").strip()
+                webhook = p.read_text(encoding="utf-8").strip()
                 _post_webhook(webhook, hostname, detection)
                 results.append(True)
             except Exception as e:
@@ -37,7 +39,6 @@ class SlackChannel:
 
 
 def _post_webhook(webhook: str, hostname: str, detection: dict) -> None:
-    from fim.template import render_body
     text = render_body(hostname, detection)
     payload = json.dumps({"text": text}).encode("utf-8")
     req = urllib.request.Request(

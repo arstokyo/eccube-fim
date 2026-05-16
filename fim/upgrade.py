@@ -9,7 +9,7 @@ import urllib.request
 
 from fim.config import INSTALL_SBIN_DIR, INSTALL_LIB_DIR
 from fim.lifecycle import _require_root
-from fim.version import REPO_SLUG, VERSION_CHECK_URL
+from fim.version import REPO_SLUG, VERSION_CHECK_URL, _FETCH_TIMEOUT
 
 
 def _fetch_release_info() -> tuple[str, str]:
@@ -20,7 +20,7 @@ def _fetch_release_info() -> tuple[str, str]:
     req = urllib.request.Request(VERSION_CHECK_URL,
                                  headers={"User-Agent": "eccube-fim"})
     try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with urllib.request.urlopen(req, timeout=_FETCH_TIMEOUT) as resp:
             data = json.loads(resp.read())
     except Exception as e:
         raise RuntimeError(

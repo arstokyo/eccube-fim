@@ -1,12 +1,9 @@
-import logging
 import subprocess
 from datetime import datetime
 from pathlib import Path
 
 from fim.exceptions import FimGitError
 from fim.utils import JST
-
-log = logging.getLogger(__name__)
 
 _GIT_STATUS_TIMEOUT = 60
 _GIT_DIFF_TIMEOUT   = 30
@@ -18,7 +15,7 @@ def _safe_dir_flag(root_path: str) -> list:
     return ["-c", f"safe.directory={root_path}"]
 
 
-def git_status(root_path: str) -> dict:
+def git_status(root_path: str) -> dict[str, str]:
     """Return porcelain status map {relative_path: xy_code} for the repo."""
     r = subprocess.run(
         ["git", *_safe_dir_flag(root_path), "status", "--porcelain"],
@@ -44,6 +41,8 @@ def git_diff(root_path: str, filepath: str,
         ["git", *_safe_dir_flag(root_path), "diff", "HEAD", "--", filepath],
         cwd=root_path, capture_output=True, text=True, timeout=_GIT_DIFF_TIMEOUT,
     )
+    if r.returncode != 0:
+        raise FimGitError(f"git diff failed: {r.stderr.strip()}")
     lines = r.stdout.splitlines()
     if len(lines) > max_lines:
         lines = lines[:max_lines] + [f"... ({len(lines) - max_lines} more lines omitted)"]

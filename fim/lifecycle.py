@@ -1,4 +1,3 @@
-import logging
 import os
 import shutil
 import subprocess
@@ -11,8 +10,6 @@ from fim.config import (
     INSTALL_TIMER_NAME, INSTALL_SERVICE_NAME,
 )
 
-log = logging.getLogger(__name__)
-
 
 def _require_root() -> bool:
     """Return True if running as root; print an error and return False otherwise."""
@@ -23,6 +20,7 @@ def _require_root() -> bool:
 
 
 def _systemctl(*args: str) -> None:
+    # non-zero is normal when unit is already stopped/disabled
     subprocess.run(["systemctl", *args], check=False)
 
 

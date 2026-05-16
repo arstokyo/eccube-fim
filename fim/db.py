@@ -1,4 +1,3 @@
-import logging
 import sqlite3
 from datetime import datetime
 from functools import wraps
@@ -6,8 +5,6 @@ from typing import Any, Callable
 
 from fim.exceptions import FimDbError
 from fim.utils import JST
-
-log = logging.getLogger(__name__)
 
 _DDL = """
     CREATE TABLE IF NOT EXISTS notifications (
@@ -47,6 +44,7 @@ class Db:
 
     def is_suppressed(self, file_path: str, sha256: str, hours: int) -> bool:
         """Return True if an identical alert was already sent within `hours`."""
+        # read-only SELECT; @db_transaction not needed — no mutation or rollback required
         row = self._conn.execute(
             "SELECT last_notified_at FROM notifications "
             "WHERE file_path=? AND content_sha256=?",

@@ -29,21 +29,21 @@ class NotifyEmail:
     smtp_user: str = ""
     smtp_password_file: str = ""
     from_addr: str = ""
-    recipients: list = field(default_factory=list)
+    recipients: list[str] = field(default_factory=list)
 
 
 @dataclass
 class NotifySlack:
     """Slack notification channel configuration."""
     enabled: bool = False
-    webhook_url_files: list = field(default_factory=list)
+    webhook_url_files: list[str] = field(default_factory=list)
 
 
 @dataclass
 class Config:
     """Complete runtime configuration for eccube-fim."""
     root_path: str
-    target_files: list
+    target_files: list[str]
     email: NotifyEmail
     slack: NotifySlack
     suppress_window_hours: int = DEFAULT_SUPPRESS_HOURS
@@ -71,9 +71,8 @@ def _load_yaml(path: Path) -> dict:
 
 
 def _validate(main: dict, targets: dict, notify: dict) -> None:
-    for key in ("root_path",):
-        if key not in main:
-            raise FimConfigError(f"daemon.yaml: missing required key '{key}'")
+    if "root_path" not in main:
+        raise FimConfigError("daemon.yaml: missing required key 'root_path'")
     if not targets.get("target_files"):
         raise FimConfigError("targets.yaml: 'target_files' is required and must not be empty")
     if not notify.get("email", {}).get("smtp_host"):

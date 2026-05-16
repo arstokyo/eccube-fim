@@ -3,6 +3,7 @@ import subprocess
 from typing import Callable, Optional
 
 from fim.config import Config
+from fim.git import _safe_dir_flag
 
 log = logging.getLogger(__name__)
 
@@ -10,7 +11,7 @@ log = logging.getLogger(__name__)
 def _show_diff_summary(cfg: Config, file_path: str, message: str) -> bool:
     """Print git diff and confirm details. Return False if no changes found."""
     r = subprocess.run(
-        ["git", "diff", "HEAD", "--", file_path],
+        ["git", *_safe_dir_flag(cfg.root_path), "diff", "HEAD", "--", file_path],
         cwd=cfg.root_path, capture_output=True, text=True,
     )
     if not r.stdout.strip():
@@ -25,9 +26,10 @@ def _show_diff_summary(cfg: Config, file_path: str, message: str) -> bool:
 
 
 def _git_commit_approved(cfg: Config, file_path: str, message: str) -> None:
-    subprocess.run(["git", "add", file_path], cwd=cfg.root_path, check=True)
+    sd = _safe_dir_flag(cfg.root_path)
+    subprocess.run(["git", *sd, "add", file_path], cwd=cfg.root_path, check=True)
     commit_msg = f"FIM-approved: {message}" if message else f"FIM-approved: {file_path}"
-    subprocess.run(["git", "commit", "-m", commit_msg], cwd=cfg.root_path, check=True)
+    subprocess.run(["git", *sd, "commit", "-m", commit_msg], cwd=cfg.root_path, check=True)
     log.info("Approved: %s (message: %s)", file_path, message or "(none)")
 
 
