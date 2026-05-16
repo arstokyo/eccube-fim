@@ -438,9 +438,11 @@ update_mode() {
 # ---------------------------------------------------------------------------
 post_install_checks() {
     echo
+    local fim_cmd="$SBIN_DIR/eccube-fim"
+
     if [ "$NONINTERACTIVE" -eq 1 ]; then
-        info "Next: eccube-fim validate"
-        info "Next: eccube-fim test-mail"
+        info "Next: $fim_cmd validate"
+        info "Next: $fim_cmd test-mail"
         info "Finished."
         return
     fi
@@ -448,21 +450,21 @@ post_install_checks() {
     # empty Enter → variable is "", which is != "n", so default is Y
     local run_validate
 
-    if ! command -v eccube-fim >/dev/null 2>&1; then
-        warn "eccube-fim not found in PATH — run 'eccube-fim validate' and 'eccube-fim test-mail' manually"
+    if [ ! -x "$fim_cmd" ]; then
+        warn "$fim_cmd not found or not executable — run validate/test-mail manually after fixing install"
         info "Finished."
         return
     fi
 
-    read -rp "Run 'eccube-fim validate' now? [Y/n]: " run_validate </dev/tty
+    read -rp "Run '$fim_cmd validate' now? [Y/n]: " run_validate </dev/tty
     if [ "${run_validate,,}" != "n" ]; then
         echo
-        if eccube-fim validate; then
+        if "$fim_cmd" validate; then
             local run_testmail
-            read -rp "Send test email via 'eccube-fim test-mail' now? [Y/n]: " run_testmail </dev/tty
+            read -rp "Send test email via '$fim_cmd test-mail' now? [Y/n]: " run_testmail </dev/tty
             if [ "${run_testmail,,}" != "n" ]; then
                 echo
-                eccube-fim test-mail || warn "test-mail failed — check notify.yaml and SMTP credentials"
+                "$fim_cmd" test-mail || warn "test-mail failed — check notify.yaml and SMTP credentials"
             fi
         else
             warn "validate failed — fix config before running test-mail"
@@ -471,6 +473,7 @@ post_install_checks() {
 
     echo
     info "Finished."
+    return 0
 }
 
 # ---------------------------------------------------------------------------
@@ -506,6 +509,8 @@ main() {
     activate_systemd_units
     info "Install complete"
     post_install_checks
+    return 0
 }
 
 main "$@"
+exit $?
