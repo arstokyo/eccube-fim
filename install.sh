@@ -473,12 +473,12 @@ post_install_checks() {
     read -rp "Run '$fim_cmd validate' now? [Y/n]: " run_validate </dev/tty
     if [ "${run_validate,,}" != "n" ]; then
         echo
-        if "$fim_cmd" validate; then
+        if "$fim_cmd" validate </dev/null; then
             local run_testmail
             read -rp "Send test email via '$fim_cmd test-mail' now? [Y/n]: " run_testmail </dev/tty
             if [ "${run_testmail,,}" != "n" ]; then
                 echo
-                "$fim_cmd" test-mail || warn "test-mail failed — check notify.yaml and SMTP credentials"
+                "$fim_cmd" test-mail </dev/null || warn "test-mail failed — check notify.yaml and SMTP credentials"
             fi
         else
             warn "validate failed — fix config before running test-mail"
