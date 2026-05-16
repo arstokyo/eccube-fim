@@ -235,9 +235,9 @@ prompt() {
     [ -n "$default" ] && display_label="$label [$default]"
     local input=""
     if [ -n "$secret" ]; then
-        read -rsp "${display_label}: " input; echo
+        read -rsp "${display_label}: " input </dev/tty; echo
     else
-        read -rp "${display_label}: " input
+        read -rp "${display_label}: " input </dev/tty
     fi
     printf -v "$var" '%s' "${input:-$default}"
 }
@@ -270,7 +270,7 @@ prompt_slack() {
     SLACK_ENABLED=false
     SLACK_WEBHOOKS=()
     [ "$NONINTERACTIVE" -eq 1 ] && return 0
-    read -rp "Enable Slack notifications? [y/N]: " yn
+    read -rp "Enable Slack notifications? [y/N]: " yn </dev/tty
     if [ "${yn,,}" != "y" ]; then
         return 0
     fi
@@ -278,7 +278,7 @@ prompt_slack() {
     local i=1
     while true; do
         local wh=""
-        read -rp "Slack webhook URL $i (empty to stop): " wh
+        read -rp "Slack webhook URL $i (empty to stop): " wh </dev/tty
         [ -z "$wh" ] && break
         local wh_file="$CONFIG_DIR/slack-${i}.webhook"
         printf '%s' "$wh" > "$wh_file"
@@ -367,10 +367,10 @@ wizard() {
         return
     fi
     # curl|bash: stdin is the pipe carrying the script, not the terminal.
-    # Re-open stdin from /dev/tty so all subsequent read calls reach the operator.
+    # Each read in prompt() and prompt_slack() uses </dev/tty directly so
+    # bash's stdin never changes — no exec redirect needed here.
     if [ ! -t 0 ]; then
         [ -c /dev/tty ] || { error "No terminal available — use --non-interactive or run directly: sudo bash install.sh"; exit 1; }
-        exec 0</dev/tty
     fi
     prompt_infra
     prompt_email
