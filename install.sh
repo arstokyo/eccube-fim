@@ -425,6 +425,60 @@ EOF
     info "post-merge hook installed: $hook_path"
 }
 
+_warn_root_ssh() {
+    local remote_url
+    remote_url=$(git -c "safe.directory=$ECCUBE_ROOT" \
+                     -C "$ECCUBE_ROOT" remote get-url origin 2>/dev/null) || return 0
+
+    # HTTP(S) remotes do not need an SSH key
+    if echo "$remote_url" | grep -qE '^https?://'; then
+        return 0
+    fi
+
+    # Root already has a usable private key — no action needed
+    if ls /root/.ssh/id_* 2>/dev/null | grep -qv '\.pub$'; then
+        return 0
+    fi
+
+    local web_home
+    web_home=$(getent passwd "$WEB_USER" | cut -d: -f6)
+
+    # Scan candidate dirs: getent home first, then common httpd shared locations
+    # because apache's home may be /usr/share/httpd while the key lives elsewhere
+    local web_key=""
+    for _dir in "${web_home}/.ssh" /usr/share/httpd/.ssh /etc/httpd/.ssh \
+                /var/www/.ssh /var/lib/apache/.ssh; do
+        for _k in id_ed25519 id_ecdsa id_rsa; do
+            [ -f "$_dir/$_k" ] && { web_key="$_dir/$_k"; break 2; }
+        done
+    done
+
+    warn "Remote is SSH but root has no private key in /root/.ssh/"
+    warn "git pull as root will fail with 'Permission denied (publickey)'"
+    warn "Choose one of the following options to fix this:"
+    echo >&2
+    warn "  Option A — reuse the existing deploy key via /root/.ssh/config:"
+    warn "    mkdir -p /root/.ssh && chmod 700 /root/.ssh"
+    warn "    cat >> /root/.ssh/config <<EOF"
+    warn "Host *"
+    if [ -n "$web_key" ]; then
+        warn "    IdentityFile $web_key"
+    else
+        warn "    IdentityFile <path-to-${WEB_USER}-deploy-key>"
+        warn "    # Locate key: sudo -u $WEB_USER ssh-add -l 2>/dev/null"
+        warn "    #             or check ${web_home}/.ssh/ and /etc/httpd/.ssh/"
+    fi
+    warn "EOF"
+    warn "    chmod 600 /root/.ssh/config"
+    echo >&2
+    warn "  Option B — generate a new key for root and register it:"
+    warn "    ssh-keygen -t ed25519 -f /root/.ssh/id_ed25519 -N ''"
+    warn "    cat /root/.ssh/id_ed25519.pub   # add to GitHub/GitLab deploy keys"
+    echo >&2
+    warn "  Option C — forward your SSH agent when running git pull:"
+    warn "    sudo -E git -c \"safe.directory=$ECCUBE_ROOT\" -C \"$ECCUBE_ROOT\" pull"
+}
+
 warn_uncommitted_changes() {
     if ! git -c "safe.directory=$ECCUBE_ROOT" -C "$ECCUBE_ROOT" \
             status --porcelain 2>/dev/null | grep -qE '^[MD]'; then
@@ -542,6 +596,7 @@ main() {
     wizard
     secure_git_dir
     install_post_merge_hook
+    _warn_root_ssh
     warn_uncommitted_changes
     install_systemd_files
     activate_systemd_units
