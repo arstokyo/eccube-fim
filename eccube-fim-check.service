@@ -1,7 +1,7 @@
 [Unit]
 Description=EC-CUBE File Integrity Monitoring Check
-Documentation=https://example.com/runbook/fim
-RequiresMountsFor=/var/www/html
+Documentation=https://github.com/arstokyo/eccube-fim
+RequiresMountsFor=%%ECCUBE_ROOT%%
 
 [Service]
 Type=oneshot
@@ -13,7 +13,7 @@ StandardError=journal
 SyslogIdentifier=eccube-fim
 
 ProtectSystem=strict
-ReadOnlyPaths=/var/www/html
+ReadOnlyPaths=%%ECCUBE_ROOT%%
 ReadWritePaths=/var/log/eccube-fim /var/run/eccube-fim /etc/eccube-fim/state.db
 NoNewPrivileges=true
 ProtectHome=true
@@ -24,3 +24,4 @@ RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 MemoryMax=256M
 CPUQuota=50%
 TimeoutStartSec=120
+# No [Install] — activated only by the timer, never enabled directly
