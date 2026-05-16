@@ -347,6 +347,12 @@ wizard() {
         _read_interval_from_timer
         return
     fi
+    # read returns 1 on EOF under set -e; require a real TTY before any prompt
+    if [ ! -t 0 ]; then
+        error "stdin is not a terminal — the interactive wizard cannot run via a pipe."
+        error "Download and run directly:  curl -fsSL <url> -o install.sh && sudo bash install.sh"
+        exit 1
+    fi
     prompt_infra
     prompt_email
     prompt_slack
