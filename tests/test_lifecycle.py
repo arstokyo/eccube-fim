@@ -101,6 +101,7 @@ def test_upgrade_replaces_files(monkeypatch, tmp_path):
     fake_src = tmp_path / "src"
     (fake_src / "fim").mkdir(parents=True)
     (fake_src / "fim" / "cli.py").write_text("# updated")
+    (fake_src / "fim" / "version.py").write_text('__version__ = "dev"\n')
     (fake_src / "bin").mkdir()
     (fake_src / "bin" / "eccube-fim").write_text("#!/usr/bin/env python3\n")
 
@@ -132,3 +133,4 @@ def test_upgrade_replaces_files(monkeypatch, tmp_path):
     assert upgrade(yes=True) == 0
     assert (lib_dir / "fim" / "cli.py").read_text() == "# updated"
     assert (sbin_dir / "eccube-fim").exists()
+    assert '__version__ = "1.2.3"' in (lib_dir / "fim" / "version.py").read_text()

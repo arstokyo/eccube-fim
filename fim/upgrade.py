@@ -6,6 +6,7 @@ import sys
 import tarfile
 import tempfile
 import urllib.request
+from pathlib import Path
 
 from fim.config import INSTALL_SBIN_DIR, INSTALL_LIB_DIR
 from fim.lifecycle import _require_root
@@ -80,6 +81,19 @@ def _find_extracted_root(dest_dir: str) -> str:
     return os.path.join(dest_dir, entries[0])
 
 
+def _stamp_version(lib_dir: str, version: str) -> None:
+    """Rewrite __version__ in the installed version.py to match the release tag."""
+    version_file = Path(lib_dir) / "fim" / "version.py"
+    text = version_file.read_text(encoding="utf-8")
+    text = re.sub(
+        r'^__version__ = ".*?"',
+        f'__version__ = "{version.lstrip("v")}"',
+        text,
+        flags=re.MULTILINE,
+    )
+    version_file.write_text(text, encoding="utf-8")
+
+
 def upgrade(yes: bool = False) -> int:
     """Download the latest release and replace library + CLI binary.
 
@@ -109,6 +123,7 @@ def upgrade(yes: bool = False) -> int:
         shutil.rmtree(os.path.join(INSTALL_LIB_DIR, "fim"), ignore_errors=True)
         shutil.copytree(os.path.join(src, "fim"),
                         os.path.join(INSTALL_LIB_DIR, "fim"))
+        _stamp_version(INSTALL_LIB_DIR, version)
         print("Replacing CLI binary...")
         dest_bin = os.path.join(INSTALL_SBIN_DIR, "eccube-fim")
         shutil.copy2(os.path.join(src, "bin", "eccube-fim"), dest_bin)
