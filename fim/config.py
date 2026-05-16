@@ -7,7 +7,7 @@ from fim.exceptions import FimConfigError
 
 DEFAULT_CONFIG_DIR      = "/etc/eccube-fim"
 DEFAULT_STATE_DB        = "/etc/eccube-fim/state.db"
-DEFAULT_HEARTBEAT_FILE  = "/var/run/eccube-fim/heartbeat"
+DEFAULT_HEARTBEAT_FILE  = "/run/eccube-fim/heartbeat"
 DEFAULT_SMTP_PORT       = 587
 DEFAULT_SUPPRESS_HOURS  = 1
 

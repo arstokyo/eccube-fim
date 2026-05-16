@@ -16,5 +16,5 @@ heartbeat:
   enabled: true
 
   # Option: file
-  # Values: [ FILE ]  Default: /var/run/eccube-fim/heartbeat
-  file: /var/run/eccube-fim/heartbeat
+  # Values: [ FILE ]  Default: /run/eccube-fim/heartbeat
+  file: /run/eccube-fim/heartbeat

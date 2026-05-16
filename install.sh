@@ -7,7 +7,7 @@ SBIN_DIR=/usr/local/sbin
 LIB_DIR=/usr/local/lib/eccube-fim
 CONFIG_DIR=/etc/eccube-fim
 LOG_DIR=/var/log/eccube-fim
-RUN_DIR=/var/run/eccube-fim
+RUN_DIR=/run/eccube-fim
 
 REPO_SLUG="arstokyo/eccube-fim"
 REPO="https://github.com/${REPO_SLUG}"

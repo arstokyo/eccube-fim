@@ -8,7 +8,7 @@ __version__ = "1.0.0"
 REPO_SLUG         = "arstokyo/eccube-fim"
 VERSION_CHECK_URL = f"https://api.github.com/repos/{REPO_SLUG}/releases/latest"
 # /run is tmpfs on systemd; stamp disappears after reboot — forces a fresh check after restart
-VERSION_CHECK_STAMP = "/var/run/eccube-fim/version_check"
+VERSION_CHECK_STAMP = "/run/eccube-fim/version_check"
 
 _CHECK_INTERVAL_HOURS = 24
 _FETCH_TIMEOUT        = 5
