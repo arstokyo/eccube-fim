@@ -122,6 +122,8 @@ def test_upgrade_replaces_files(monkeypatch, tmp_path):
     (lib_dir / "fim").mkdir(parents=True)
     sbin_dir = tmp_path / "sbin"
     sbin_dir.mkdir()
+    config_dir = tmp_path / "config"
+    config_dir.mkdir()
 
     monkeypatch.setattr("os.geteuid", lambda: 0)
     monkeypatch.setattr("fim.upgrade._fetch_release_info",
@@ -130,7 +132,7 @@ def test_upgrade_replaces_files(monkeypatch, tmp_path):
     monkeypatch.setattr("fim.upgrade.INSTALL_LIB_DIR",  str(lib_dir))
     monkeypatch.setattr("fim.upgrade.INSTALL_SBIN_DIR", str(sbin_dir))
 
-    assert upgrade(yes=True) == 0
+    assert upgrade(yes=True, config_dir=str(config_dir)) == 0
     assert (lib_dir / "fim" / "cli.py").read_text() == "# updated"
     assert (sbin_dir / "eccube-fim").exists()
-    assert '__version__ = "1.2.3"' in (lib_dir / "fim" / "version.py").read_text()
+    assert (config_dir / ".version").read_text() == "1.2.3\n"

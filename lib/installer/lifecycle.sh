@@ -5,8 +5,12 @@ update_mode() {
     local daemon_f="$CONFIG_DIR/daemon.yaml"
     [ -f "$daemon_f" ] || { error "No config found — run without --update for a fresh install"; exit 1; }
     install_library
+    install_version_stamp
     install_cli
     install_logrotate
+    # belt-and-suspenders: LogsDirectory handles this on service start, but update_mode
+    # runs before the service restarts so old installs without LogsDirectory still get the dir
+    mkdir -p "$LOG_DIR" && chmod 700 "$LOG_DIR" && chown root:root "$LOG_DIR"
     ECCUBE_ROOT=$(awk '/^root_path:/{print $2}' "$daemon_f")
     _read_interval_from_timer
     install_systemd_files

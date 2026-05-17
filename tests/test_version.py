@@ -1,6 +1,6 @@
 import json
 from unittest.mock import patch, MagicMock
-from fim.version import _fetch_latest, warn_if_update
+from fim.version import _fetch_latest, warn_if_update, read_installed_version
 
 
 def _make_response(tag: str, body: str) -> MagicMock:
@@ -12,28 +12,25 @@ def _make_response(tag: str, body: str) -> MagicMock:
 
 
 def test_fetch_latest_returns_none_when_up_to_date(monkeypatch):
-    import fim.version as v
-    monkeypatch.setattr(v, "__version__", "1.2.3")
+    monkeypatch.setattr("fim.version.read_installed_version", lambda *a, **kw: "1.2.3")
     resp = _make_response("v1.2.3", 'python_requires: ">=3.9"')
     with patch("urllib.request.urlopen", return_value=resp):
-        assert v._fetch_latest() is None
+        assert _fetch_latest() is None
 
 
 def test_fetch_latest_returns_tuple_when_newer(monkeypatch):
-    import fim.version as v
-    monkeypatch.setattr(v, "__version__", "1.0.0")
+    monkeypatch.setattr("fim.version.read_installed_version", lambda *a, **kw: "1.0.0")
     resp = _make_response("v1.2.3", 'python_requires: ">=3.9"')
     with patch("urllib.request.urlopen", return_value=resp):
-        result = v._fetch_latest()
+        result = _fetch_latest()
     assert result == ("1.0.0", "1.2.3")
 
 
 def test_fetch_latest_returns_none_when_incompatible_python(monkeypatch):
-    import fim.version as v
-    monkeypatch.setattr(v, "__version__", "1.0.0")
+    monkeypatch.setattr("fim.version.read_installed_version", lambda *a, **kw: "1.0.0")
     resp = _make_response("v2.0.0", 'python_requires: ">=99.0"')
     with patch("urllib.request.urlopen", return_value=resp):
-        assert v._fetch_latest() is None
+        assert _fetch_latest() is None
 
 
 def test_fetch_latest_silent_on_network_error():
@@ -42,11 +39,24 @@ def test_fetch_latest_silent_on_network_error():
 
 
 def test_warn_if_update_prints_upgrade_command(monkeypatch, capsys):
-    import fim.version as v
-    monkeypatch.setattr(v, "__version__", "1.0.0")
+    monkeypatch.setattr("fim.version.read_installed_version", lambda *a, **kw: "1.0.0")
     resp = _make_response("v1.2.3", 'python_requires: ">=3.9"')
     with patch("urllib.request.urlopen", return_value=resp):
         warn_if_update()
     out = capsys.readouterr().out
     assert "eccube-fim upgrade" in out
     assert "1.2.3" in out
+
+
+def test_read_installed_version_reads_stamp_file(tmp_path):
+    (tmp_path / ".version").write_text("1.2.3\n")
+    assert read_installed_version(str(tmp_path)) == "1.2.3"
+
+
+def test_read_installed_version_strips_whitespace(tmp_path):
+    (tmp_path / ".version").write_text("  1.2.3  \n")
+    assert read_installed_version(str(tmp_path)) == "1.2.3"
+
+
+def test_read_installed_version_returns_dev_when_missing(tmp_path):
+    assert read_installed_version(str(tmp_path)) == "dev"

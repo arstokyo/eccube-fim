@@ -24,6 +24,7 @@ main() {
     create_directories
     setup_tmpfiles
     install_library
+    install_version_stamp
     install_cli
     install_logrotate
     wizard

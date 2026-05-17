@@ -3,7 +3,7 @@ import sys
 from typing import Optional
 
 from fim.config import Config, load_config, DEFAULT_CONFIG_DIR
-from fim.version import __version__
+from fim.version import read_installed_version
 from fim.exceptions import FimConfigError
 from fim.lifecycle import _require_root
 from fim.log import setup_logging
@@ -60,10 +60,11 @@ def _add_uninstall_parser(sub: argparse._SubParsersAction) -> None:
 
 
 def _build_parser() -> argparse.ArgumentParser:
+    installed = read_installed_version()
     p = argparse.ArgumentParser(prog="eccube-fim",
                                 description="EC-CUBE file integrity monitoring")
     p.add_argument("--version", "-v", action="version",
-                   version=f"%(prog)s {__version__}")
+                   version=f"%(prog)s {installed}")
     p.add_argument("--config-dir", default=DEFAULT_CONFIG_DIR, metavar="DIR",
                    help=f"Config directory (default: {DEFAULT_CONFIG_DIR})")
     p.add_argument("--verbose", action="store_true",

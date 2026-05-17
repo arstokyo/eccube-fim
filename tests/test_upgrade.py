@@ -101,32 +101,29 @@ def test_find_extracted_root_ignores_files(tmp_path):
 # upgrade — version equality check
 # ---------------------------------------------------------------------------
 
-def test_upgrade_skips_when_already_at_latest(monkeypatch, capsys):
-    import fim.version
-    monkeypatch.setattr(fim.version, "__version__", "1.0.0")
-    # fim.upgrade binds __version__ at import time; patch both names to keep them in sync
-    monkeypatch.setattr("fim.upgrade.__version__", "1.0.0")
+def test_upgrade_skips_when_already_at_latest(monkeypatch, tmp_path, capsys):
+    (tmp_path / ".version").write_text("1.0.0\n")
     monkeypatch.setattr("os.geteuid", lambda: 0)
     with patch("fim.upgrade._fetch_release_info", return_value=("v1.0.0", "")):
-        result = upgrade(yes=True)
+        result = upgrade(yes=True, config_dir=str(tmp_path))
     assert result == 0
     out = capsys.readouterr().out
     assert "Already at the latest version" in out
     assert "nothing to do" in out
 
 
-def test_upgrade_skips_suggests_force(monkeypatch, capsys):
-    monkeypatch.setattr("fim.upgrade.__version__", "1.0.0")
+def test_upgrade_skips_suggests_force(monkeypatch, tmp_path, capsys):
+    (tmp_path / ".version").write_text("1.0.0\n")
     monkeypatch.setattr("os.geteuid", lambda: 0)
     with patch("fim.upgrade._fetch_release_info", return_value=("v1.0.0", "")):
-        upgrade(yes=True)
+        upgrade(yes=True, config_dir=str(tmp_path))
     assert "--force" in capsys.readouterr().out
 
 
 _INSTALL_PATCHES = [
     "fim.upgrade._download_tarball",
     "fim.upgrade._find_extracted_root",
-    "fim.upgrade._stamp_version",
+    "fim.upgrade._write_version_stamp",
     "shutil.rmtree",
     "shutil.copytree",
     "shutil.copy2",
@@ -141,26 +138,36 @@ def _patch_install(stack: ExitStack, tmp_path: str) -> None:
 
 
 def test_upgrade_proceeds_when_force_and_same_version(monkeypatch, tmp_path, capsys):
-    monkeypatch.setattr("fim.upgrade.__version__", "1.0.0")
     monkeypatch.setattr("os.geteuid", lambda: 0)
     monkeypatch.setattr("fim.upgrade.INSTALL_LIB_DIR", str(tmp_path))
     monkeypatch.setattr("fim.upgrade.INSTALL_SBIN_DIR", str(tmp_path))
     with ExitStack() as stack:
         stack.enter_context(patch("fim.upgrade._fetch_release_info", return_value=("v1.0.0", "")))
         _patch_install(stack, str(tmp_path))
-        result = upgrade(yes=True, force=True)
+        result = upgrade(yes=True, force=True, config_dir=str(tmp_path))
     assert result == 0
     assert "Already at the latest" not in capsys.readouterr().out
 
 
 def test_upgrade_proceeds_when_newer_version_available(monkeypatch, tmp_path, capsys):
-    monkeypatch.setattr("fim.upgrade.__version__", "1.0.0")
     monkeypatch.setattr("os.geteuid", lambda: 0)
     monkeypatch.setattr("fim.upgrade.INSTALL_LIB_DIR", str(tmp_path))
     monkeypatch.setattr("fim.upgrade.INSTALL_SBIN_DIR", str(tmp_path))
     with ExitStack() as stack:
         stack.enter_context(patch("fim.upgrade._fetch_release_info", return_value=("v1.1.0", "")))
         _patch_install(stack, str(tmp_path))
-        result = upgrade(yes=True)
+        result = upgrade(yes=True, config_dir=str(tmp_path))
     assert result == 0
     assert "Already at the latest" not in capsys.readouterr().out
+
+
+def test_write_version_stamp_strips_v_prefix(tmp_path):
+    from fim.upgrade import _write_version_stamp
+    _write_version_stamp(str(tmp_path), "v1.2.3")
+    assert (tmp_path / ".version").read_text() == "1.2.3\n"
+
+
+def test_write_version_stamp_without_v_prefix(tmp_path):
+    from fim.upgrade import _write_version_stamp
+    _write_version_stamp(str(tmp_path), "1.2.3")
+    assert (tmp_path / ".version").read_text() == "1.2.3\n"

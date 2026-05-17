@@ -196,12 +196,16 @@ install_library() {
     info "Installing Python library"
     rm -rf "$LIB_DIR/fim"
     cp -R "$SRC_DIR/fim" "$LIB_DIR/fim"
-    # stamp release tag into installed version.py — tarball ships with "dev"
-    sed -i "s|^__version__ = .*|__version__ = \"${VERSION#v}\"|" \
-        "$LIB_DIR/fim/version.py"
     find "$LIB_DIR" -type d -exec chmod 755 {} \;
     find "$LIB_DIR" -type f -exec chmod 644 {} \;
     chown -R root:root "$LIB_DIR"
+}
+
+install_version_stamp() {
+    info "Writing version stamp (${VERSION#v})"
+    printf '%s\n' "${VERSION#v}" > "$CONFIG_DIR/.version"
+    chmod 644 "$CONFIG_DIR/.version"
+    chown root:root "$CONFIG_DIR/.version"
 }
 
 install_cli() {
@@ -500,7 +504,6 @@ install_systemd_files() {
     sed \
         -e "s|%%ECCUBE_ROOT%%|${ECCUBE_ROOT}|g" \
         -e "s|%%SBIN_DIR%%|${SBIN_DIR}|g" \
-        -e "s|%%LOG_DIR%%|${LOG_DIR}|g" \
         -e "s|%%RUN_DIR%%|${RUN_DIR}|g" \
         -e "s|%%CONFIG_DIR%%|${CONFIG_DIR}|g" \
         "$SRC_DIR/systemd/eccube-fim-check.service" \
@@ -524,8 +527,12 @@ update_mode() {
     local daemon_f="$CONFIG_DIR/daemon.yaml"
     [ -f "$daemon_f" ] || { error "No config found — run without --update for a fresh install"; exit 1; }
     install_library
+    install_version_stamp
     install_cli
     install_logrotate
+    # belt-and-suspenders: LogsDirectory handles this on service start, but update_mode
+    # runs before the service restarts so old installs without LogsDirectory still get the dir
+    mkdir -p "$LOG_DIR" && chmod 700 "$LOG_DIR" && chown root:root "$LOG_DIR"
     ECCUBE_ROOT=$(awk '/^root_path:/{print $2}' "$daemon_f")
     _read_interval_from_timer
     install_systemd_files
@@ -602,6 +609,7 @@ main() {
     create_directories
     setup_tmpfiles
     install_library
+    install_version_stamp
     install_cli
     install_logrotate
     wizard

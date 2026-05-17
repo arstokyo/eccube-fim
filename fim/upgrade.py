@@ -8,9 +8,9 @@ import tempfile
 import urllib.request
 from pathlib import Path
 
-from fim.config import INSTALL_SBIN_DIR, INSTALL_LIB_DIR
+from fim.config import INSTALL_SBIN_DIR, INSTALL_LIB_DIR, DEFAULT_CONFIG_DIR
 from fim.lifecycle import _require_root
-from fim.version import __version__, REPO_SLUG, VERSION_CHECK_URL, _FETCH_TIMEOUT
+from fim.version import REPO_SLUG, VERSION_CHECK_URL, _FETCH_TIMEOUT, read_installed_version
 
 
 def _fetch_release_info() -> tuple[str, str]:
@@ -81,20 +81,12 @@ def _find_extracted_root(dest_dir: str) -> str:
     return os.path.join(dest_dir, entries[0])
 
 
-def _stamp_version(lib_dir: str, version: str) -> None:
-    """Rewrite __version__ in the installed version.py to match the release tag."""
-    version_file = Path(lib_dir) / "fim" / "version.py"
-    text = version_file.read_text(encoding="utf-8")
-    text = re.sub(
-        r'^__version__ = ".*?"',
-        f'__version__ = "{version.lstrip("v")}"',
-        text,
-        flags=re.MULTILINE,
-    )
-    version_file.write_text(text, encoding="utf-8")
+def _write_version_stamp(config_dir: str, version: str) -> None:
+    """Write the installed version string to the stamp file in config_dir."""
+    (Path(config_dir) / ".version").write_text(version.lstrip("v") + "\n", encoding="utf-8")
 
 
-def _install_release(version: str, yes: bool) -> int:
+def _install_release(version: str, yes: bool, config_dir: str) -> int:
     """Prompt for confirmation, download `version`, replace library + binary.
 
     Return 0 on success, 1 if the user cancels.
@@ -114,7 +106,7 @@ def _install_release(version: str, yes: bool) -> int:
         shutil.rmtree(os.path.join(INSTALL_LIB_DIR, "fim"), ignore_errors=True)
         shutil.copytree(os.path.join(src, "fim"),
                         os.path.join(INSTALL_LIB_DIR, "fim"))
-        _stamp_version(INSTALL_LIB_DIR, version)
+        _write_version_stamp(config_dir, version)
         print("Replacing CLI binary...")
         dest_bin = os.path.join(INSTALL_SBIN_DIR, "eccube-fim")
         shutil.copy2(os.path.join(src, "bin", "eccube-fim"), dest_bin)
@@ -123,7 +115,8 @@ def _install_release(version: str, yes: bool) -> int:
     return 0
 
 
-def upgrade(yes: bool = False, force: bool = False) -> int:
+def upgrade(yes: bool = False, force: bool = False,
+            config_dir: str = DEFAULT_CONFIG_DIR) -> int:
     """Download the latest release and replace library + CLI binary.
 
     Return 0 on success, 1 on network/API error. Raises SystemExit(1)
@@ -137,9 +130,10 @@ def upgrade(yes: bool = False, force: bool = False) -> int:
         print(f"Error: {e}", file=sys.stderr)
         return 1
     _check_python_requires(python_requires)
+    installed = read_installed_version(config_dir)
     latest_clean = version.lstrip("v")
-    if latest_clean == __version__ and not force:
-        print(f"Already at the latest version ({__version__}) — nothing to do.")
+    if latest_clean == installed and not force:
+        print(f"Already at the latest version ({installed}) — nothing to do.")
         print("Use --force to reinstall anyway.")
         return 0
-    return _install_release(version, yes)
+    return _install_release(version, yes, config_dir)

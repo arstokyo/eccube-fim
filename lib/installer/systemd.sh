@@ -6,7 +6,6 @@ install_systemd_files() {
     sed \
         -e "s|%%ECCUBE_ROOT%%|${ECCUBE_ROOT}|g" \
         -e "s|%%SBIN_DIR%%|${SBIN_DIR}|g" \
-        -e "s|%%LOG_DIR%%|${LOG_DIR}|g" \
         -e "s|%%RUN_DIR%%|${RUN_DIR}|g" \
         -e "s|%%CONFIG_DIR%%|${CONFIG_DIR}|g" \
         "$SRC_DIR/systemd/eccube-fim-check.service" \

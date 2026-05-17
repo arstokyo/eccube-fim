@@ -14,6 +14,15 @@ VERSION_CHECK_STAMP = "/run/eccube-fim/version_check"
 
 _CHECK_INTERVAL_HOURS = 24
 _FETCH_TIMEOUT        = 5
+_DEFAULT_CONFIG_DIR   = "/etc/eccube-fim"
+
+
+def read_installed_version(config_dir: str = _DEFAULT_CONFIG_DIR) -> str:
+    """Return the installed version from the stamp file, or 'dev' if missing."""
+    try:
+        return (Path(config_dir) / ".version").read_text(encoding="utf-8").strip()
+    except OSError:
+        return "dev"
 
 
 def warn_if_update(stamp_path: Optional[str] = None) -> None:
@@ -57,6 +66,7 @@ def _fetch_latest() -> Optional[tuple[str, str]]:
     Returns None on network error, when already up-to-date, or when the
     latest release requires a newer Python than the running interpreter.
     """
+    current = read_installed_version()
     try:
         req = urllib.request.Request(VERSION_CHECK_URL,
                                      headers={"User-Agent": "eccube-fim"})
@@ -64,7 +74,7 @@ def _fetch_latest() -> Optional[tuple[str, str]]:
             data = json.loads(resp.read())
         tag = data.get("tag_name", "")
         latest = tag.lstrip("v")
-        if not latest or latest == __version__:
+        if not latest or latest == current:
             return None
         body = data.get("body", "")
         m = re.search(r'python_requires:\s*"(.*?)"', body)
@@ -74,7 +84,7 @@ def _fetch_latest() -> Optional[tuple[str, str]]:
             if sys.version_info[:len(min_parts)] < min_parts:
                 # latest release requires a newer Python — skip the warning
                 return None
-        return (__version__, latest)
+        return (current, latest)
     except Exception:
-        pass  # silent on network error, timeout, JSON parse failure
+        pass  # known: intentionally silent — any error here would interrupt the user's primary command for a background check
     return None

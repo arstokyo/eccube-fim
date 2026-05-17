@@ -15,7 +15,11 @@ def setup_logging(verbose: bool = False) -> None:
     sh = logging.StreamHandler(sys.stderr)
     sh.setFormatter(fmt)
     logger.addHandler(sh)
-    if LOG_DIR.exists():
+    try:
+        # fallback for old service files without LogsDirectory; runs as root so mkdir is safe
+        LOG_DIR.mkdir(parents=True, exist_ok=True)
         fh = logging.FileHandler(LOG_DIR / "check.log")
         fh.setFormatter(fmt)
         logger.addHandler(fh)
+    except OSError as e:
+        logger.warning("Cannot write to log file %s/check.log: %s", LOG_DIR, e)

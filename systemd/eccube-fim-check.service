@@ -14,7 +14,9 @@ SyslogIdentifier=eccube-fim
 
 ProtectSystem=strict
 ReadOnlyPaths=%%ECCUBE_ROOT%%
-ReadWritePaths=%%LOG_DIR%% %%RUN_DIR%% %%CONFIG_DIR%%
+ReadWritePaths=%%RUN_DIR%% %%CONFIG_DIR%%
+LogsDirectory=eccube-fim
+LogsDirectoryMode=0700
 NoNewPrivileges=true
 ProtectHome=true
 ProtectKernelModules=true
