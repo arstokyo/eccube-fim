@@ -116,7 +116,7 @@ def _migrate_only(config_dir: str) -> int:
         print("No pending migrations.")
     try:
         version, _ = _fetch_release_info()
-        _write_version_stamp(config_dir, version.lstrip("v"))
+        _write_version_stamp(config_dir, version)
     except RuntimeError:
         # leave stamp unchanged — next upgrade run will find no pending migrations
         # and exit cleanly without re-downloading

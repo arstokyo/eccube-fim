@@ -75,6 +75,6 @@ def show_timer() -> int:
     except (OSError, ValueError) as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1
-    print(f"Check interval : {_format_interval(minutes)}  ({minutes} minutes)")
+    print(f"Check interval : {format_interval(minutes)}  ({minutes} minutes)")
     print(f"Timer unit     : {TIMER_UNIT}")
     return 0
