@@ -94,9 +94,10 @@ def _run_migrations(config_dir: str) -> int:
 
 
 def _install_release(version: str, yes: bool, config_dir: str) -> int:
+    # known: 35 lines — sequential install steps; splitting would require passing version+config_dir as state
     """Prompt for confirmation, download `version`, replace library + binary.
 
-    Return 0 on success, 1 if the user cancels.
+    Return 0 on success, 1 if the user cancels or migrations fail.
     """
     print(f"Latest version : {version}")
     print(f"Will replace   : {INSTALL_LIB_DIR}/fim  and  {INSTALL_SBIN_DIR}/eccube-fim")
@@ -113,7 +114,6 @@ def _install_release(version: str, yes: bool, config_dir: str) -> int:
         shutil.rmtree(os.path.join(INSTALL_LIB_DIR, "fim"), ignore_errors=True)
         shutil.copytree(os.path.join(src, "fim"),
                         os.path.join(INSTALL_LIB_DIR, "fim"))
-        _write_version_stamp(config_dir, version)
         print("Running migrations...")
         try:
             count = _run_migrations(config_dir)
@@ -122,6 +122,7 @@ def _install_release(version: str, yes: bool, config_dir: str) -> int:
         except RuntimeError as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1
+        _write_version_stamp(config_dir, version)
         print("Replacing CLI binary...")
         dest_bin = os.path.join(INSTALL_SBIN_DIR, "eccube-fim")
         shutil.copy2(os.path.join(src, "bin", "eccube-fim"), dest_bin)

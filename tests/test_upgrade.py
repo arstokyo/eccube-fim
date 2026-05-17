@@ -167,6 +167,25 @@ def test_upgrade_proceeds_when_newer_version_available(monkeypatch, tmp_path, ca
     assert "Already at the latest" not in capsys.readouterr().out
 
 
+def test_upgrade_does_not_write_stamp_when_migration_fails(monkeypatch, tmp_path):
+    monkeypatch.setattr("os.geteuid", lambda: 0)
+    monkeypatch.setattr("fim.upgrade.INSTALL_LIB_DIR", str(tmp_path))
+    monkeypatch.setattr("fim.upgrade.INSTALL_SBIN_DIR", str(tmp_path))
+    with ExitStack() as stack:
+        stack.enter_context(patch("fim.upgrade._fetch_release_info",
+                                  return_value=("v1.1.0", "")))
+        stack.enter_context(patch("fim.upgrade._download_tarball"))
+        stack.enter_context(patch("fim.upgrade._find_extracted_root",
+                                  return_value=str(tmp_path)))
+        stack.enter_context(patch("shutil.rmtree"))
+        stack.enter_context(patch("shutil.copytree"))
+        stack.enter_context(patch("fim.upgrade._run_migrations",
+                                  side_effect=RuntimeError("boom")))
+        result = upgrade(yes=True, config_dir=str(tmp_path))
+    assert result == 1
+    assert not (tmp_path / ".version").exists()
+
+
 def test_write_version_stamp_strips_v_prefix(tmp_path):
     from fim.upgrade import _write_version_stamp
     _write_version_stamp(str(tmp_path), "v1.2.3")
