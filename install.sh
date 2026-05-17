@@ -497,7 +497,12 @@ warn_uncommitted_changes() {
 # ---------------------------------------------------------------------------
 install_systemd_files() {
     info "Installing systemd units (interval: ${CHECK_INTERVAL}m, root: $ECCUBE_ROOT)"
-    sed "s|%%ECCUBE_ROOT%%|${ECCUBE_ROOT}|g" \
+    sed \
+        -e "s|%%ECCUBE_ROOT%%|${ECCUBE_ROOT}|g" \
+        -e "s|%%SBIN_DIR%%|${SBIN_DIR}|g" \
+        -e "s|%%LOG_DIR%%|${LOG_DIR}|g" \
+        -e "s|%%RUN_DIR%%|${RUN_DIR}|g" \
+        -e "s|%%CONFIG_DIR%%|${CONFIG_DIR}|g" \
         "$SRC_DIR/systemd/eccube-fim-check.service" \
         > /etc/systemd/system/eccube-fim-check.service
     sed "s|%%INTERVAL%%|${CHECK_INTERVAL}|g" \

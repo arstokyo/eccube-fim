@@ -5,7 +5,7 @@ RequiresMountsFor=%%ECCUBE_ROOT%%
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/sbin/eccube-fim check
+ExecStart=%%SBIN_DIR%%/eccube-fim check
 User=root
 Group=root
 StandardOutput=journal
@@ -14,7 +14,7 @@ SyslogIdentifier=eccube-fim
 
 ProtectSystem=strict
 ReadOnlyPaths=%%ECCUBE_ROOT%%
-ReadWritePaths=/var/log/eccube-fim /run/eccube-fim /etc/eccube-fim
+ReadWritePaths=%%LOG_DIR%% %%RUN_DIR%% %%CONFIG_DIR%%
 NoNewPrivileges=true
 ProtectHome=true
 ProtectKernelModules=true
