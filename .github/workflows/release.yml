@@ -26,7 +26,7 @@ jobs:
           DIST="eccube-fim-${GITHUB_REF_NAME}"
           mkdir "$DIST"
           cp -r fim bin config \
-                eccube-fim-check.service eccube-fim-check.timer \
+                systemd \
                 eccube-fim.logrotate install.sh \
                 "$DIST/"
           tar -czf "${DIST}.tar.gz" "$DIST/"
