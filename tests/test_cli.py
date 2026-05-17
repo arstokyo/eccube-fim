@@ -8,7 +8,8 @@ from fim.cli import main
 @pytest.mark.parametrize("argv", [
     ["eccube-fim", "check"],
     ["eccube-fim", "validate"],
-    ["eccube-fim", "test-mail"],
+    ["eccube-fim", "test", "mail"],
+    ["eccube-fim", "test", "slack"],
     ["eccube-fim", "approve", "app/template/default/Shopping/index.twig"],
     ["eccube-fim", "upgrade"],
     ["eccube-fim", "uninstall"],
@@ -24,7 +25,8 @@ def test_command_fails_when_not_root(monkeypatch, capsys, argv):
 @pytest.mark.parametrize("argv,mock_target,mock_return", [
     (["eccube-fim", "check"], "fim.cli.cmd_check", 0),
     (["eccube-fim", "validate"], "fim.cli.cmd_validate", 0),
-    (["eccube-fim", "test-mail"], "fim.cli.cmd_test_mail", 0),
+    (["eccube-fim", "test", "mail"], "fim.cli_parsers_test.cmd_test_mail", 0),
+    (["eccube-fim", "test", "slack"], "fim.cli_parsers_test.cmd_test_slack", 0),
     (["eccube-fim", "approve", "app/template/default/Shopping/index.twig"],
      "fim.cli.cmd_approve", 0),
     (["eccube-fim", "upgrade"], "fim.cli.cmd_upgrade", 0),

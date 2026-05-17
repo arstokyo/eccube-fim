@@ -7,6 +7,7 @@ from pathlib import Path
 
 from fim.config import Config
 from fim.notify.email import EmailChannel
+from fim.notify.slack import SlackChannel
 from fim.utils import JST
 
 log = logging.getLogger(__name__)
@@ -69,12 +70,8 @@ def validate_config(cfg: Config) -> bool:
     return all_ok
 
 
-def send_test_mail(cfg: Config) -> int:
-    """Send a test email using the configured SMTP settings. Return 0 on success."""
-    now = datetime.now(JST).strftime("%Y-%m-%d %H:%M:%S JST")
-    print(f"Sending test email to {cfg.email.recipients} "
-          f"via {cfg.email.smtp_host}:{cfg.email.smtp_port} ...")
-    detection = {
+def _build_test_detection(cfg: Config, now: str) -> dict:
+    return {
         "path": "(test)",
         "full_path": "(test)",
         "root_path": cfg.root_path,
@@ -83,6 +80,17 @@ def send_test_mail(cfg: Config) -> int:
         "mtime": now,
         "sha256": "",
     }
+
+
+def send_test_mail(cfg: Config) -> int:
+    """Send a test email using the configured SMTP settings. Return 0 on success."""
+    if not cfg.email.enabled:
+        print("Email is disabled in notify.yaml — nothing to test.", file=sys.stderr)
+        return 1
+    now = datetime.now(JST).strftime("%Y-%m-%d %H:%M:%S JST")
+    print(f"Sending test email to {cfg.email.recipients} "
+          f"via {cfg.email.smtp_host}:{cfg.email.smtp_port} ...")
+    detection = _build_test_detection(cfg, now)
     try:
         ok = EmailChannel(cfg.email).send(socket.gethostname(), [detection])
         if not ok:
@@ -93,4 +101,26 @@ def send_test_mail(cfg: Config) -> int:
         print(f"FAILED: {e}", file=sys.stderr)
         return 1
     print("Test email sent successfully")
+    return 0
+
+
+def send_test_slack(cfg: Config) -> int:
+    """Send a test Slack message using the configured webhook. Return 0 on success."""
+    if not cfg.slack.enabled:
+        print("Slack is disabled in notify.yaml — nothing to test.", file=sys.stderr)
+        return 1
+    now = datetime.now(JST).strftime("%Y-%m-%d %H:%M:%S JST")
+    n = len(cfg.slack.webhook_url_files)
+    print(f"Sending test Slack message via {n} webhook(s) ...")
+    detection = _build_test_detection(cfg, now)
+    try:
+        ok = SlackChannel(cfg.slack).send(socket.gethostname(), [detection])
+        if not ok:
+            print("FAILED: Slack send failed", file=sys.stderr)
+            return 1
+    except Exception as e:
+        log.error("Test Slack failed: %s", e)
+        print(f"FAILED: {e}", file=sys.stderr)
+        return 1
+    print("Test Slack message sent successfully")
     return 0

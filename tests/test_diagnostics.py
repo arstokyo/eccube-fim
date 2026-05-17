@@ -1,7 +1,7 @@
 import subprocess
 import pytest
 from fim.config import Config, NotifyEmail, NotifySlack
-from fim.diagnostics import validate_config, send_test_mail
+from fim.diagnostics import validate_config, send_test_mail, send_test_slack
 
 
 @pytest.fixture
@@ -46,6 +46,28 @@ def test_send_test_mail_returns_1_on_exception(monkeypatch, diag_cfg):
         raise OSError("connection refused")
     monkeypatch.setattr("fim.diagnostics.EmailChannel.send", _raise)
     assert send_test_mail(diag_cfg) == 1
+
+
+def test_send_test_slack_disabled_returns_1(diag_cfg, capsys):
+    # slack is disabled by default in diag_cfg (NotifySlack())
+    assert send_test_slack(diag_cfg) == 1
+    assert "disabled" in capsys.readouterr().err
+
+
+def test_send_test_slack_returns_0_on_success(monkeypatch, diag_cfg, capsys):
+    diag_cfg.slack.enabled = True
+    diag_cfg.slack.webhook_url_files = ["/tmp/fake_webhook"]
+    monkeypatch.setattr("fim.diagnostics.SlackChannel.send", lambda self, h, ds: True)
+    assert send_test_slack(diag_cfg) == 0
+    assert "Test Slack message sent successfully" in capsys.readouterr().out
+
+
+def test_send_test_slack_returns_1_on_failure(monkeypatch, diag_cfg, capsys):
+    diag_cfg.slack.enabled = True
+    diag_cfg.slack.webhook_url_files = ["/tmp/fake_webhook"]
+    monkeypatch.setattr("fim.diagnostics.SlackChannel.send", lambda self, h, ds: False)
+    assert send_test_slack(diag_cfg) == 1
+    assert "FAILED" in capsys.readouterr().err
 
 
 def test_validate_config_passes_for_existing_root(diag_cfg, capsys):

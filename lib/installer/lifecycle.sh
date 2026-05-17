@@ -23,7 +23,7 @@ post_install_checks() {
 
     if [ "$NONINTERACTIVE" -eq 1 ]; then
         info "Next: $fim_cmd validate"
-        info "Next: $fim_cmd test-mail"
+        info "Next: $fim_cmd test mail"
         info "Finished."
         return
     fi
@@ -32,7 +32,7 @@ post_install_checks() {
     local run_validate
 
     if [ ! -x "$fim_cmd" ]; then
-        warn "$fim_cmd not found or not executable — run validate/test-mail manually after fixing install"
+        warn "$fim_cmd not found or not executable — run validate/test mail manually after fixing install"
         info "Finished."
         return
     fi
@@ -42,13 +42,13 @@ post_install_checks() {
         echo
         if "$fim_cmd" validate </dev/null; then
             local run_testmail
-            read -rp "Send test email via '$fim_cmd test-mail' now? [Y/n]: " run_testmail </dev/tty
+            read -rp "Send test email via '$fim_cmd test mail' now? [Y/n]: " run_testmail </dev/tty
             if [ "${run_testmail,,}" != "n" ]; then
                 echo
-                "$fim_cmd" test-mail </dev/null || warn "test-mail failed — check notify.yaml and SMTP credentials"
+                "$fim_cmd" test mail </dev/null || warn "test mail failed — check notify.yaml and SMTP credentials"
             fi
         else
-            warn "validate failed — fix config before running test-mail"
+            warn "validate failed — fix config before running test mail"
         fi
     fi
 

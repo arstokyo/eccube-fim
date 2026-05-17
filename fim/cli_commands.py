@@ -26,6 +26,13 @@ def cmd_test_mail(args: argparse.Namespace, cfg: Config) -> int:
     return send_test_mail(cfg)
 
 
+def cmd_test_slack(args: argparse.Namespace, cfg: Config) -> int:
+    from fim.diagnostics import send_test_slack
+    from fim.version import warn_if_update
+    warn_if_update()
+    return send_test_slack(cfg)
+
+
 def cmd_approve(args: argparse.Namespace, cfg: Config) -> int:
     from fim.ops import approve_change
     from fim.version import warn_if_update
