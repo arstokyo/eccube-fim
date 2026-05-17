@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 from fim._template_data import _REQUIRED_VARS, _SAMPLE_DETECTIONS
-from fim.editor import open_in_editor
+from fim.editor import open_in_editor, _file_hash
 from fim.template import (
     BUILTIN_TEMPLATE_DIR, TEMPLATE_NAMES,
     render_subject, render_email_body, render_slack_body,
@@ -62,7 +62,12 @@ def edit_template(config_dir: str, name: str) -> int:
     if not override_path.exists():
         shutil.copy2(BUILTIN_TEMPLATE_DIR / TEMPLATE_NAMES[name], override_path)
         print(f"Copied built-in to {override_path}")
-    open_in_editor(str(override_path))
+    before = _file_hash(str(override_path))
+    if not open_in_editor(str(override_path)):
+        return 1
+    if _file_hash(str(override_path)) == before:
+        print("No changes made.")
+        return 0
     _validate_template_vars(override_path, name)
     print(f"Template saved: {override_path}")
     return 0

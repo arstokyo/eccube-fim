@@ -100,11 +100,15 @@ def test_edit_warns_on_missing_template_variable(config_dir, capsys):
     override_dir = Path(config_dir) / "templates"
     override_dir.mkdir()
     bad_template = override_dir / "email_body.txt"
-    bad_template.write_text(
-        "Hello $hostname on $detected_at\n$file_blocks\n",
-        encoding="utf-8",
-    )
-    with patch("fim.template_ops.open_in_editor"):
+    bad_template.write_text("original", encoding="utf-8")
+
+    def _write_bad(path):
+        Path(path).write_text(
+            "Hello $hostname on $detected_at\n$file_blocks\n", encoding="utf-8"
+        )
+        return True  # match open_in_editor's bool contract
+
+    with patch("fim.template_ops.open_in_editor", side_effect=_write_bad):
         edit_template(config_dir, "email")
     assert "Warning" in capsys.readouterr().err
 
@@ -112,14 +116,39 @@ def test_edit_warns_on_missing_template_variable(config_dir, capsys):
 def test_edit_no_warning_when_variables_intact(config_dir, capsys):
     override_dir = Path(config_dir) / "templates"
     override_dir.mkdir()
-    good_template = override_dir / "email_body.txt"
-    good_template.write_text(
-        "Host: $hostname at $detected_at\nCount: $file_count\n$file_blocks\n",
-        encoding="utf-8",
-    )
-    with patch("fim.template_ops.open_in_editor"):
+    initial = override_dir / "email_body.txt"
+    initial.write_text("original", encoding="utf-8")
+
+    def _write_good(path):
+        Path(path).write_text(
+            "Host: $hostname at $detected_at\nCount: $file_count\n$file_blocks\n",
+            encoding="utf-8",
+        )
+        return True  # match open_in_editor's bool contract
+
+    with patch("fim.template_ops.open_in_editor", side_effect=_write_good):
         edit_template(config_dir, "email")
     assert "Warning" not in capsys.readouterr().err
+
+
+def test_edit_prints_saved_when_file_changes(config_dir, capsys):
+    def _modify(path):
+        Path(path).write_text(
+            "Host: $hostname at $detected_at\nCount: $file_count\n$file_blocks\n",
+            encoding="utf-8",
+        )
+        return True  # match open_in_editor's bool contract
+    with patch("fim.template_ops.open_in_editor", side_effect=_modify):
+        rc = edit_template(config_dir, "email")
+    assert rc == 0
+    assert "Template saved" in capsys.readouterr().out
+
+
+def test_edit_prints_no_changes_when_file_unchanged(config_dir, capsys):
+    with patch("fim.template_ops.open_in_editor"):   # no-op editor
+        rc = edit_template(config_dir, "email")
+    assert rc == 0
+    assert "No changes made" in capsys.readouterr().out
 
 
 def test_preview_renders_all_sections(config_dir, capsys):

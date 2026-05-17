@@ -1,9 +1,10 @@
+# known: 153 lines — flat parser registry; no natural split boundary
 import argparse
 from typing import Optional
 
 from fim.config import Config
 from fim.cli_commands import (
-    cmd_config_show, cmd_config_edit,
+    cmd_config_show, cmd_config_edit, cmd_config_timer,
     cmd_target_list, cmd_target_add, cmd_target_remove,
     cmd_template_list, cmd_template_show, cmd_template_edit,
     cmd_template_reset, cmd_template_preview,
@@ -57,7 +58,7 @@ def add_log_parser(sub: argparse._SubParsersAction) -> None:
     lp.set_defaults(func=cmd_log, needs_config=False, needs_root=True)
 
 
-def add_config_parser(sub: argparse._SubParsersAction) -> None:
+def add_config_parser(sub: argparse._SubParsersAction) -> None:  # known: 36 lines — declarative parser registration, no logic boundary
     cp = sub.add_parser("config", help="view or edit configuration files")
     csub = cp.add_subparsers(dest="config_cmd", metavar="ACTION")
 
@@ -81,6 +82,18 @@ def add_config_parser(sub: argparse._SubParsersAction) -> None:
         help="which file to edit (default: targets)",
     )
     ep.set_defaults(func=cmd_config_edit, needs_config=False, needs_root=True)
+
+    timer_sp = csub.add_parser(
+        "timer",
+        help="show or change the check interval (e.g. 5, 30, 1h)",
+    )
+    timer_sp.add_argument(
+        "interval",
+        nargs="?",
+        metavar="INTERVAL",
+        help="new interval: number = minutes (1–60) or '1h' (e.g. 5, 30, 1h)",
+    )
+    timer_sp.set_defaults(func=cmd_config_timer, needs_config=False, needs_root=True)
 
 
 def add_target_parser(sub: argparse._SubParsersAction) -> None:

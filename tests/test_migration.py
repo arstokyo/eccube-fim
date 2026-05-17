@@ -1,4 +1,5 @@
 import sqlite3
+import textwrap
 from pathlib import Path
 
 import pytest
@@ -101,3 +102,41 @@ def test_run_migrations_delegates_to_runner(tmp_path, monkeypatch):
     _write_migration(r._migrations_dir, 1)
     monkeypatch.setattr("fim.migration.MigrationRunner", lambda config_dir: r)
     assert run_migrations(str(tmp_path)) == 1
+
+
+def test_is_applied_skips_run(tmp_path):
+    """is_applied=True → run() never called, migration recorded."""
+    mig_src = textwrap.dedent("""\
+        import sqlite3
+
+        def is_applied(conn):
+            return True
+
+        def run(config_dir):
+            raise AssertionError("run() must not be called when is_applied() is True")
+    """)
+    r = _runner(tmp_path)
+    (r._migrations_dir / "0001_test.py").write_text(mig_src, encoding="utf-8")
+    count = r.run()
+    assert count == 1
+    conn = sqlite3.connect(r._db_path)
+    rows = conn.execute("SELECT id FROM schema_migrations").fetchall()
+    conn.close()
+    assert rows == [(1,)]
+
+
+def test_is_applied_false_calls_run(tmp_path):
+    """is_applied=False → run() called, migration recorded."""
+    mig_src = textwrap.dedent("""\
+        import sqlite3
+
+        def is_applied(conn):
+            return False
+
+        def run(config_dir):
+            pass  # idempotent no-op
+    """)
+    r = _runner(tmp_path)
+    (r._migrations_dir / "0001_test.py").write_text(mig_src, encoding="utf-8")
+    count = r.run()
+    assert count == 1

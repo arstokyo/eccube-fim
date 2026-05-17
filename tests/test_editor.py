@@ -27,11 +27,27 @@ def test_edit_config_file_invalid_which(config_dir, capsys):
     assert "Unknown config file" in capsys.readouterr().err
 
 
-def test_edit_config_file_opens_editor_and_validates_ok(config_dir):
+def test_edit_config_file_no_change_skips_validation(config_dir, capsys):
     with patch("fim.editor.open_in_editor") as mock_editor:
-        with patch("fim.editor.validate_config", return_value=True) as mock_validate:
+        with patch("fim.editor.validate_config") as mock_validate:
             rc = edit_config_file(config_dir, "targets")
     mock_editor.assert_called_once()
+    mock_validate.assert_not_called()
+    assert rc == 0
+    assert "No changes made" in capsys.readouterr().out
+
+
+def test_edit_config_file_validates_when_file_changes(config_dir):
+    def _modify(path):
+        with open(path, "a", encoding="utf-8") as f:
+            f.write("  # comment\n")
+        return True  # match open_in_editor's bool contract
+
+    with patch("fim.editor.open_in_editor", side_effect=_modify):
+        with patch("fim.editor.load_config") as mock_load:
+            with patch("fim.editor.validate_config", return_value=True) as mock_validate:
+                rc = edit_config_file(config_dir, "targets")
+    mock_load.assert_called_once()
     mock_validate.assert_called_once()
     assert rc == 0
 
@@ -40,16 +56,19 @@ def test_edit_config_file_reports_validation_error(config_dir):
     def _corrupt_file(path):
         with open(path, "w", encoding="utf-8") as f:
             f.write("deduplication:\n  suppress_window_hours: 1\n")
+        return True  # match open_in_editor's bool contract
 
     with patch("fim.editor.open_in_editor", side_effect=_corrupt_file):
         rc = edit_config_file(config_dir, "targets")
     assert rc == 1
 
 
-def test_edit_config_file_missing_file(config_dir, capsys):
-    rc = edit_config_file(config_dir, "daemon")
-    # daemon.yaml exists — this tests valid path, so let's use a fresh tmp
-    pass  # covered by test_edit_config_file_invalid_which
+def test_edit_config_file_missing_file(capsys, tmp_path):
+    empty_dir = str(tmp_path / "empty")
+    os.makedirs(empty_dir)
+    rc = edit_config_file(empty_dir, "daemon")
+    assert rc == 1
+    assert "Not found" in capsys.readouterr().err
 
 
 def test_open_in_editor_uses_EDITOR_env(tmp_path):

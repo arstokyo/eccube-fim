@@ -1,3 +1,4 @@
+# known: 158 lines — flat command registry; no natural split boundary
 import argparse
 import sys
 from typing import Optional
@@ -43,7 +44,12 @@ def cmd_approve(args: argparse.Namespace, cfg: Config) -> int:
 
 def cmd_upgrade(args: argparse.Namespace, cfg: Optional[Config]) -> int:
     from fim.upgrade import upgrade
-    return upgrade(yes=args.yes, force=args.force, config_dir=args.config_dir)
+    return upgrade(
+        yes=args.yes,
+        force=args.force,
+        migrate_only=args.migrate_only,
+        config_dir=args.config_dir,
+    )
 
 
 def cmd_migrate(args: argparse.Namespace, cfg: Optional[Config]) -> int:
@@ -71,6 +77,24 @@ def cmd_config_show(args: argparse.Namespace, cfg: Config) -> int:
 def cmd_config_edit(args: argparse.Namespace, cfg: Optional[Config]) -> int:
     from fim.editor import edit_config_file
     return edit_config_file(args.config_dir, args.file)
+
+
+def cmd_config_timer(args: argparse.Namespace, cfg: Optional[Config]) -> int:
+    from fim.timer_ops import show_timer, set_timer_interval, parse_interval_arg, format_interval
+    if args.interval is None:
+        return show_timer()
+    try:
+        minutes = parse_interval_arg(args.interval)
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
+    try:
+        set_timer_interval(minutes)
+    except (OSError, RuntimeError) as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
+    print(f"Timer interval set to {format_interval(minutes)} — timer restarted.")
+    return 0
 
 
 def cmd_target_list(args: argparse.Namespace, cfg: Optional[Config]) -> int:

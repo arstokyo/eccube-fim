@@ -80,14 +80,27 @@ def _load_migration(path: Path) -> Any:
 
 
 def _apply_one(conn: sqlite3.Connection, mid: int, path: Path, config_dir: str) -> None:
+    """Run one migration or record it if already structurally applied.
+
+    Calls is_applied(conn) before run() so a migration whose SQL effects are
+    already present (e.g. after manual intervention) is recorded without
+    re-executing — prevents errors from non-idempotent DDL on a repaired DB.
+    """
     mod = _load_migration(path)
+    if hasattr(mod, "is_applied") and mod.is_applied(conn):
+        _record(conn, mid, path.name)
+        return
     try:
         mod.run(config_dir)
     except Exception as e:
         raise RuntimeError(f"Migration {path.name} failed: {e}") from e
+    _record(conn, mid, path.name)
+
+
+def _record(conn: sqlite3.Connection, mid: int, name: str) -> None:
     conn.execute(
         "INSERT INTO schema_migrations (id, name, applied_at) VALUES (?,?,?)",
-        (mid, path.name, int(datetime.now(JST).timestamp())),
+        (mid, name, int(datetime.now(JST).timestamp())),
     )
     conn.commit()
 

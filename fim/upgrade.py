@@ -1,3 +1,4 @@
+# known: 194 lines — sequential upgrade pipeline; _migrate_only and _install_release are tightly coupled to shared helpers
 import json
 import os
 import re
@@ -93,8 +94,39 @@ def _run_migrations(config_dir: str) -> int:
     return _m.run_migrations(config_dir)
 
 
+def _migrate_only(config_dir: str) -> int:
+    """Run pending migrations and update the version stamp. No download.
+
+    Return 0 on success, 1 if migrations fail. Used for upgrade retries
+    when code is already in place but state.db migration was interrupted.
+    """
+    print("Running pending migrations...")
+    try:
+        count = _run_migrations(config_dir)
+    except RuntimeError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        print(
+            "Fix the error above, then retry: eccube-fim upgrade --migrate-only",
+            file=sys.stderr,
+        )
+        return 1
+    if count:
+        print(f"Applied {count} migration(s).")
+    else:
+        print("No pending migrations.")
+    try:
+        version, _ = _fetch_release_info()
+        _write_version_stamp(config_dir, version.lstrip("v"))
+    except RuntimeError:
+        # leave stamp unchanged — next upgrade run will find no pending migrations
+        # and exit cleanly without re-downloading
+        pass
+    print("Migration retry complete.")
+    return 0
+
+
 def _install_release(version: str, yes: bool, config_dir: str) -> int:
-    # known: 35 lines — sequential install steps; splitting would require passing version+config_dir as state
+    # known: 40 lines — sequential install steps; splitting would require passing version+config_dir as state
     """Prompt for confirmation, download `version`, replace library + binary.
 
     Return 0 on success, 1 if the user cancels or migrations fail.
@@ -121,6 +153,11 @@ def _install_release(version: str, yes: bool, config_dir: str) -> int:
                 print(f"Applied {count} migration(s).")
         except RuntimeError as e:
             print(f"Error: {e}", file=sys.stderr)
+            print(
+                "Code is in place. To retry migrations without re-downloading: "
+                "eccube-fim upgrade --migrate-only",
+                file=sys.stderr,
+            )
             return 1
         _write_version_stamp(config_dir, version)
         print("Replacing CLI binary...")
@@ -131,7 +168,7 @@ def _install_release(version: str, yes: bool, config_dir: str) -> int:
     return 0
 
 
-def upgrade(yes: bool = False, force: bool = False,
+def upgrade(yes: bool = False, force: bool = False, migrate_only: bool = False,
             config_dir: str = DEFAULT_CONFIG_DIR) -> int:
     """Download the latest release and replace library + CLI binary.
 
@@ -140,6 +177,8 @@ def upgrade(yes: bool = False, force: bool = False,
     """
     if not _require_root():
         return 1
+    if migrate_only:
+        return _migrate_only(config_dir)
     try:
         version, python_requires = _fetch_release_info()
     except RuntimeError as e:

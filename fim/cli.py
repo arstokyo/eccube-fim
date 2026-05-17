@@ -47,6 +47,10 @@ def _add_upgrade_parser(sub: argparse._SubParsersAction) -> None:
                     help="skip confirmation prompt")
     sp.add_argument("--force", "-f", action="store_true",
                     help="reinstall even if already at the latest version")
+    sp.add_argument(
+        "--migrate-only", action="store_true",
+        help="run pending migrations only — skip code download (use after a failed upgrade)",
+    )
     sp.set_defaults(func=cmd_upgrade, needs_config=False, needs_root=True)
 
 

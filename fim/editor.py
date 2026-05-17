@@ -1,6 +1,8 @@
+import hashlib
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 from fim.config import Config, NotifyEmail, NotifySlack, load_config
 from fim.diagnostics import validate_config
@@ -8,6 +10,14 @@ from fim.exceptions import FimConfigError
 
 _VALID_FILES = {"daemon", "targets", "notify"}
 _EDITOR_FALLBACK = "vi"
+
+
+def _file_hash(path: str) -> str:
+    """Return sha256 hex digest of file contents; empty string if file is missing."""
+    try:
+        return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    except OSError:
+        return ""
 
 
 def open_in_editor(path: str) -> bool:
@@ -40,8 +50,12 @@ def edit_config_file(config_dir: str, which: str) -> int:
     if not os.path.exists(path):
         print(f"Not found: {path}", file=sys.stderr)
         return 1
+    before = _file_hash(path)
     if not open_in_editor(path):
         return 1
+    if _file_hash(path) == before:
+        print("No changes made.")
+        return 0
     try:
         cfg = load_config(config_dir)
     except FimConfigError as e:

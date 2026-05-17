@@ -8,8 +8,12 @@ update_mode() {
     install_cli
     install_logrotate
     # run after new lib + binary are in place so new migration files are used
-    "$SBIN_DIR/eccube-fim" _migrate --config-dir "$CONFIG_DIR" \
-        || { error "Migrations failed — upgrade aborted"; exit 1; }
+    "$SBIN_DIR/eccube-fim" _migrate --config-dir "$CONFIG_DIR" || {
+        error "Migrations failed — upgrade aborted"
+        error "To retry migrations without reinstalling: $SBIN_DIR/eccube-fim upgrade --migrate-only"
+        error "To retry manually: $SBIN_DIR/eccube-fim _migrate --config-dir $CONFIG_DIR"
+        exit 1
+    }
     # stamp written only after migrations succeed so a failed upgrade is retryable
     install_version_stamp
     # belt-and-suspenders: LogsDirectory handles this on service start, but update_mode
@@ -24,14 +28,16 @@ update_mode() {
 # ---------------------------------------------------------------------------
 # Post-install verification offer
 # ---------------------------------------------------------------------------
-# known: 39 lines — sequential prompt flow; splitting would require passing $run_validate as state
+# known: 43 lines — sequential prompt flow; splitting would require passing $run_validate as state
 post_install_checks() {
     echo
     local fim_cmd="$SBIN_DIR/eccube-fim"
 
     if [ "$NONINTERACTIVE" -eq 1 ]; then
         info "Next: $fim_cmd validate"
-        info "Next: $fim_cmd test mail"
+        if [ "${EMAIL_ENABLED:-true}" = "true" ]; then
+            info "Next: $fim_cmd test mail"
+        fi
         info "Finished."
         return
     fi
@@ -49,11 +55,13 @@ post_install_checks() {
     if [ "${run_validate,,}" != "n" ]; then
         echo
         if "$fim_cmd" validate </dev/null; then
-            local run_testmail
-            read -rp "Send test email via '$fim_cmd test mail' now? [Y/n]: " run_testmail </dev/tty
-            if [ "${run_testmail,,}" != "n" ]; then
-                echo
-                "$fim_cmd" test mail </dev/null || warn "test mail failed — check notify.yaml and SMTP credentials"
+            if [ "${EMAIL_ENABLED:-true}" = "true" ]; then
+                local run_testmail
+                read -rp "Send test email via '$fim_cmd test mail' now? [Y/n]: " run_testmail </dev/tty
+                if [ "${run_testmail,,}" != "n" ]; then
+                    echo
+                    "$fim_cmd" test mail </dev/null || warn "test mail failed — check notify.yaml and SMTP credentials"
+                fi
             fi
         else
             warn "validate failed — fix config before running test mail"

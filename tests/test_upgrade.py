@@ -196,3 +196,47 @@ def test_write_version_stamp_without_v_prefix(tmp_path):
     from fim.upgrade import _write_version_stamp
     _write_version_stamp(str(tmp_path), "1.2.3")
     assert (tmp_path / ".version").read_text() == "1.2.3\n"
+
+
+# ---------------------------------------------------------------------------
+# upgrade --migrate-only
+# ---------------------------------------------------------------------------
+
+def test_migrate_only_calls_run_migrations(tmp_path):
+    """--migrate-only skips download and runs only migrations."""
+    config_dir = str(tmp_path)
+    (tmp_path / ".version").write_text("1.0.0\n", encoding="utf-8")
+
+    with patch("fim.upgrade._require_root", return_value=True), \
+         patch("fim.upgrade._run_migrations", return_value=2) as mock_mig, \
+         patch("fim.upgrade._fetch_release_info", return_value=("v1.0.0", "")), \
+         patch("fim.upgrade._write_version_stamp") as mock_stamp, \
+         patch("fim.upgrade._download_tarball") as mock_dl:
+        rc = upgrade(migrate_only=True, config_dir=config_dir)
+
+    assert rc == 0
+    mock_mig.assert_called_once_with(config_dir)
+    mock_stamp.assert_called_once()
+    mock_dl.assert_not_called()
+
+
+def test_migrate_only_returns_1_on_failure(tmp_path, capsys):
+    config_dir = str(tmp_path)
+    with patch("fim.upgrade._require_root", return_value=True), \
+         patch("fim.upgrade._run_migrations", side_effect=RuntimeError("bad")):
+        rc = upgrade(migrate_only=True, config_dir=config_dir)
+    assert rc == 1
+    assert "--migrate-only" in capsys.readouterr().err
+
+
+def test_migrate_only_no_network_leaves_stamp_unchanged(tmp_path):
+    """When GitHub is unreachable, stamp is left unchanged (next upgrade finds no migrations)."""
+    config_dir = str(tmp_path)
+    (tmp_path / ".version").write_text("1.2.3\n", encoding="utf-8")
+    with patch("fim.upgrade._require_root", return_value=True), \
+         patch("fim.upgrade._run_migrations", return_value=0), \
+         patch("fim.upgrade._fetch_release_info", side_effect=RuntimeError("no net")), \
+         patch("fim.upgrade._write_version_stamp") as mock_stamp:
+        rc = upgrade(migrate_only=True, config_dir=config_dir)
+    assert rc == 0
+    mock_stamp.assert_not_called()
