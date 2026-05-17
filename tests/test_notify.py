@@ -16,6 +16,8 @@ def _detection():
 
 
 class DummyChannel:
+    """Test double for Channel; records send() calls and returns a preset result."""
+
     def __init__(self, result=True):
         self.result = result
         self.calls = []

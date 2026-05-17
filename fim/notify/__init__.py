@@ -14,7 +14,6 @@ def build_channels(cfg: Config) -> list[Channel]:
     if cfg.email.enabled:
         channels.append(EmailChannel(cfg.email))
     if cfg.slack.enabled:
-        # only added when configured — excluded from dispatch entirely when off
         channels.append(SlackChannel(cfg.slack))
     return channels
 

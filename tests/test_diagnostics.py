@@ -1,3 +1,4 @@
+import subprocess
 import pytest
 from fim.config import Config, NotifyEmail, NotifySlack
 from fim.diagnostics import validate_config, send_test_mail
@@ -15,6 +16,10 @@ def email_cfg():
 
 @pytest.fixture
 def diag_cfg(repo, email_cfg):
+    twig = repo / "index.twig"
+    twig.write_text("")
+    subprocess.run(["git", "add", "index.twig"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "add twig"], cwd=repo, check=True, capture_output=True)
     return Config(
         root_path=str(repo),
         target_files=["index.twig"],
@@ -46,7 +51,7 @@ def test_send_test_mail_returns_1_on_exception(monkeypatch, diag_cfg):
 def test_validate_config_passes_for_existing_root(diag_cfg, capsys):
     result = validate_config(diag_cfg)
     assert "Config validation" in capsys.readouterr().out
-    assert isinstance(result, bool)
+    assert result is True
 
 
 def test_validate_config_fails_for_missing_root(diag_cfg, capsys):
