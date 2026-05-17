@@ -92,3 +92,23 @@ def cmd_template_reset(args: argparse.Namespace, cfg: Optional[Config]) -> int:
 def cmd_template_preview(args: argparse.Namespace, cfg: Optional[Config]) -> int:
     from fim.template_ops import preview_template
     return preview_template(args.config_dir)
+
+
+def cmd_status(args: argparse.Namespace, cfg: Config) -> int:
+    from fim.observe import status
+    return status(cfg)
+
+
+def cmd_db_list(args: argparse.Namespace, cfg: Config) -> int:
+    from fim.observe import db_list
+    return db_list(cfg)
+
+
+def cmd_db_clear(args: argparse.Namespace, cfg: Config) -> int:
+    from fim.observe import db_clear
+    return db_clear(cfg, file_path=args.file, yes=args.yes)
+
+
+def cmd_log(args: argparse.Namespace, cfg: Optional[Config]) -> int:
+    from fim.observe import log_tail
+    return log_tail(lines=args.lines, level=args.level)

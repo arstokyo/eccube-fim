@@ -10,7 +10,10 @@ from fim.cli_commands import (
     cmd_check, cmd_validate, cmd_test_mail, cmd_approve,
     cmd_upgrade, cmd_uninstall,
 )
-from fim.cli_parsers import add_config_parser, add_target_parser, add_template_parser
+from fim.cli_parsers import (
+    add_status_parser, add_db_parser, add_log_parser,
+    add_config_parser, add_target_parser, add_template_parser,
+)
 
 
 def _add_check_parser(sub: argparse._SubParsersAction) -> None:
@@ -73,6 +76,9 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_approve_parser(sub)
     _add_upgrade_parser(sub)
     _add_uninstall_parser(sub)
+    add_status_parser(sub)
+    add_db_parser(sub)
+    add_log_parser(sub)
     add_config_parser(sub)
     add_target_parser(sub)
     add_template_parser(sub)
