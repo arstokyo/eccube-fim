@@ -12,7 +12,7 @@ def _load(name: str) -> string.Template:
     return string.Template((_TEMPLATE_DIR / name).read_text(encoding="utf-8"))
 
 
-def _render_body(template_name: str, hostname: str, detections: list,
+def _render_body(template_name: str, hostname: str, detections: list[dict],
                  block_fmt: Callable[[dict], str]) -> str:
     now_str = datetime.now(JST).strftime("%Y-%m-%d %H:%M:%S")
     file_blocks = "\n\n".join(block_fmt(d) for d in detections)
@@ -25,18 +25,18 @@ def _render_body(template_name: str, hostname: str, detections: list,
 
 
 def render_subject(hostname: str) -> str:
-    """Render email subject. Supports $hostname for operator customisation."""
+    """Render the alert email subject line."""
     return _load("message_subject.txt").substitute(hostname=hostname).strip()
 
 
-def render_email_body(hostname: str, detections: list) -> str:
+def render_email_body(hostname: str, detections: list[dict]) -> str:
     """Render operator-facing email body: per-file path + diff in plain text."""
     def _fmt(d: dict) -> str:
         return f"--- {d.get('full_path', d['path'])} ---\n{d['diff']}"
     return _render_body("email_body.txt", hostname, detections, _fmt)
 
 
-def render_slack_body(hostname: str, detections: list) -> str:
+def render_slack_body(hostname: str, detections: list[dict]) -> str:
     """Render engineer-facing Slack body: per-file diff in Markdown code blocks."""
     def _fmt(d: dict) -> str:
         path = d.get("full_path", d["path"])

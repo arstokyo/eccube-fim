@@ -20,7 +20,7 @@ class DummyChannel:
         self.result = result
         self.calls = []
 
-    def send(self, hostname: str, detections: list) -> bool:
+    def send(self, hostname: str, detections: list[dict]) -> bool:
         self.calls.append((hostname, detections))
         return self.result
 
@@ -73,6 +73,7 @@ def test_dispatch_notifications_calls_each_channel_once_with_full_list():
     assert len(first.calls) == 1
     assert len(second.calls) == 1
     assert first.calls[0] == ("host-a", detections)
+    assert second.calls[0] == ("host-a", detections)
 
 
 def test_dispatch_notifications_reports_channel_failure():

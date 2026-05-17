@@ -8,7 +8,7 @@ from fim.notify.slack import SlackChannel
 log = logging.getLogger(__name__)
 
 
-def build_channels(cfg: Config) -> list:
+def build_channels(cfg: Config) -> list[Channel]:
     """Construct enabled channels with their config slices."""
     channels = []
     if cfg.email.enabled:
@@ -19,8 +19,8 @@ def build_channels(cfg: Config) -> list:
     return channels
 
 
-def dispatch_notifications(channels: list, hostname: str,
-                            detections: list, dry_run: bool) -> bool:
+def dispatch_notifications(channels: list[Channel], hostname: str,
+                            detections: list[dict], dry_run: bool) -> bool:
     """Send one batched notification per channel. Return True if every send succeeded."""
     if dry_run:
         log.info("dry-run: skipping %d detection(s)", len(detections))
@@ -29,7 +29,7 @@ def dispatch_notifications(channels: list, hostname: str,
     return all(results)
 
 
-def _send_safe(channel: Channel, hostname: str, detections: list) -> bool:
+def _send_safe(channel: Channel, hostname: str, detections: list[dict]) -> bool:
     try:
         return channel.send(hostname, detections)
     except Exception as e:

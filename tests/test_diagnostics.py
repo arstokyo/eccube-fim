@@ -53,3 +53,4 @@ def test_validate_config_fails_for_missing_root(diag_cfg, capsys):
     diag_cfg.root_path = "/nonexistent/path"
     result = validate_config(diag_cfg)
     assert "NOT FOUND" in capsys.readouterr().out
+    assert result is False
