@@ -4,7 +4,7 @@ from email.mime.text import MIMEText
 from pathlib import Path
 
 from fim.config import NotifyEmail
-from fim.template import render_subject, render_body
+from fim.template import render_subject, render_email_body
 
 log = logging.getLogger(__name__)
 
@@ -17,10 +17,10 @@ class EmailChannel:
     def __init__(self, cfg: NotifyEmail) -> None:
         self._cfg = cfg
 
-    def send(self, hostname: str, detection: dict) -> bool:
+    def send(self, hostname: str, detections: list) -> bool:
         try:
             subject = render_subject(hostname)
-            body = render_body(hostname, detection)
+            body = render_email_body(hostname, detections)
             _send_smtp(self._cfg, subject, body)
             return True
         except Exception as e:

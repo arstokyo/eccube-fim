@@ -35,10 +35,11 @@ def _print_targets_table(cfg: Config) -> bool:
 
 
 def _print_secrets_status(cfg: Config) -> None:
-    pw_file = cfg.email.smtp_password_file
-    pw_ok = bool(pw_file) and Path(pw_file).exists()
-    print(f"Email recipients : {cfg.email.recipients or '(none)'}")
-    print(f"SMTP password    : {'found' if pw_ok else 'NOT FOUND'} ({pw_file})")
+    if cfg.email.enabled:
+        pw_file = cfg.email.smtp_password_file
+        pw_ok = bool(pw_file) and Path(pw_file).exists()
+        print(f"Email recipients : {cfg.email.recipients or '(none)'}")
+        print(f"SMTP password    : {'found' if pw_ok else 'NOT FOUND'} ({pw_file})")
     if cfg.slack.enabled:
         for wh_file in cfg.slack.webhook_url_files:
             wh_ok = Path(wh_file).exists()
@@ -75,7 +76,7 @@ def send_test_mail(cfg: Config) -> int:
         "sha256": "",
     }
     try:
-        ok = EmailChannel(cfg.email).send(socket.gethostname(), detection)
+        ok = EmailChannel(cfg.email).send(socket.gethostname(), [detection])
         if not ok:
             print("FAILED: email send failed", file=sys.stderr)
             return 1

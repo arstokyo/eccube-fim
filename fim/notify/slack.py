@@ -4,7 +4,7 @@ import urllib.request
 from pathlib import Path
 
 from fim.config import NotifySlack
-from fim.template import render_body
+from fim.template import render_slack_body
 
 log = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ class SlackChannel:
     def __init__(self, cfg: NotifySlack) -> None:
         self._cfg = cfg
 
-    def send(self, hostname: str, detection: dict) -> bool:
+    def send(self, hostname: str, detections: list) -> bool:
         if not self._cfg.webhook_url_files:
             log.warning("No Slack webhook files configured — skipping Slack")
             return False
@@ -30,7 +30,7 @@ class SlackChannel:
                 continue
             try:
                 webhook = p.read_text(encoding="utf-8").strip()
-                _post_webhook(webhook, hostname, detection)
+                _post_webhook(webhook, hostname, detections)
                 results.append(True)
             except Exception as e:
                 log.error("Slack send failed (%s): %s", wh_file, e)
@@ -38,8 +38,8 @@ class SlackChannel:
         return all(results)
 
 
-def _post_webhook(webhook: str, hostname: str, detection: dict) -> None:
-    text = render_body(hostname, detection)
+def _post_webhook(webhook: str, hostname: str, detections: list) -> None:
+    text = render_slack_body(hostname, detections)
     payload = json.dumps({"text": text}).encode("utf-8")
     req = urllib.request.Request(
         webhook, data=payload,

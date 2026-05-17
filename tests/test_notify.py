@@ -20,8 +20,8 @@ class DummyChannel:
         self.result = result
         self.calls = []
 
-    def send(self, hostname, detection):
-        self.calls.append((hostname, detection))
+    def send(self, hostname: str, detections: list) -> bool:
+        self.calls.append((hostname, detections))
         return self.result
 
 
@@ -44,7 +44,7 @@ def test_email_channel_sends_rendered_message(monkeypatch, tmp_path):
 
     monkeypatch.setattr("fim.notify.email._send_smtp", fake_send_smtp)
 
-    assert EmailChannel(cfg).send("host-a", _detection()) is True
+    assert EmailChannel(cfg).send("host-a", [_detection()]) is True
     assert sent["cfg"] is cfg
     assert "[ALERT]" in sent["subject"]
     assert "/shop/index.twig" in sent["body"]
@@ -59,10 +59,10 @@ def test_email_channel_returns_false_on_failure(monkeypatch):
 
     monkeypatch.setattr("fim.notify.email._send_smtp", fail_send_smtp)
 
-    assert EmailChannel(cfg).send("host-a", _detection()) is False
+    assert EmailChannel(cfg).send("host-a", [_detection()]) is False
 
 
-def test_dispatch_notifications_sends_each_detection_to_each_channel():
+def test_dispatch_notifications_calls_each_channel_once_with_full_list():
     first = DummyChannel()
     second = DummyChannel()
     detections = [_detection(), dict(_detection(), path="admin.twig")]
@@ -70,9 +70,9 @@ def test_dispatch_notifications_sends_each_detection_to_each_channel():
     ok = dispatch_notifications([first, second], "host-a", detections, dry_run=False)
 
     assert ok is True
-    assert len(first.calls) == 2
-    assert len(second.calls) == 2
-    assert first.calls[0] == ("host-a", detections[0])
+    assert len(first.calls) == 1
+    assert len(second.calls) == 1
+    assert first.calls[0] == ("host-a", detections)
 
 
 def test_dispatch_notifications_reports_channel_failure():

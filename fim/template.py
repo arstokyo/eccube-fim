@@ -1,6 +1,7 @@
 import string
 from datetime import datetime
 from pathlib import Path
+from typing import Callable
 
 from fim.utils import JST
 
@@ -11,18 +12,33 @@ def _load(name: str) -> string.Template:
     return string.Template((_TEMPLATE_DIR / name).read_text(encoding="utf-8"))
 
 
+def _render_body(template_name: str, hostname: str, detections: list,
+                 block_fmt: Callable[[dict], str]) -> str:
+    now_str = datetime.now(JST).strftime("%Y-%m-%d %H:%M:%S")
+    file_blocks = "\n\n".join(block_fmt(d) for d in detections)
+    return _load(template_name).substitute(
+        detected_at=now_str,
+        hostname=hostname,
+        file_count=len(detections),
+        file_blocks=file_blocks,
+    )
+
+
 def render_subject(hostname: str) -> str:
     """Render email subject. Supports $hostname for operator customisation."""
     return _load("message_subject.txt").substitute(hostname=hostname).strip()
 
 
-def render_body(hostname: str, detection: dict) -> str:
-    """Render shared body for one detected file (email and Slack)."""
-    now_str = datetime.now(JST).strftime("%Y-%m-%d %H:%M:%S")
-    return _load("message_body.txt").substitute(
-        detected_at=now_str,
-        hostname=hostname,
-        full_path=detection.get("full_path", detection["path"]),
-        root_path=detection.get("root_path", ""),
-        diff=detection["diff"],
-    )
+def render_email_body(hostname: str, detections: list) -> str:
+    """Render operator-facing email body: per-file path + diff in plain text."""
+    def _fmt(d: dict) -> str:
+        return f"--- {d.get('full_path', d['path'])} ---\n{d['diff']}"
+    return _render_body("email_body.txt", hostname, detections, _fmt)
+
+
+def render_slack_body(hostname: str, detections: list) -> str:
+    """Render engineer-facing Slack body: per-file diff in Markdown code blocks."""
+    def _fmt(d: dict) -> str:
+        path = d.get("full_path", d["path"])
+        return f"*ファイル:* {path}\n```\n{d['diff']}\n```"
+    return _render_body("slack_body.txt", hostname, detections, _fmt)

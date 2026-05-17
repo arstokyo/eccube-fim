@@ -10,7 +10,9 @@ log = logging.getLogger(__name__)
 
 def build_channels(cfg: Config) -> list:
     """Construct enabled channels with their config slices."""
-    channels = [EmailChannel(cfg.email)]
+    channels = []
+    if cfg.email.enabled:
+        channels.append(EmailChannel(cfg.email))
     if cfg.slack.enabled:
         # only added when configured — excluded from dispatch entirely when off
         channels.append(SlackChannel(cfg.slack))
@@ -18,23 +20,18 @@ def build_channels(cfg: Config) -> list:
 
 
 def dispatch_notifications(channels: list, hostname: str,
-                            detected: list, dry_run: bool) -> bool:
-    """Send one notification per detected file to all channels.
-    Return True if every send succeeded."""
+                            detections: list, dry_run: bool) -> bool:
+    """Send one batched notification per channel. Return True if every send succeeded."""
     if dry_run:
-        log.info("dry-run: skipping %d detection(s)", len(detected))
+        log.info("dry-run: skipping %d detection(s)", len(detections))
         return True
-    results = [
-        _send_safe(ch, hostname, d)
-        for d in detected
-        for ch in channels
-    ]
+    results = [_send_safe(ch, hostname, detections) for ch in channels]
     return all(results)
 
 
-def _send_safe(channel: Channel, hostname: str, detection: dict) -> bool:
+def _send_safe(channel: Channel, hostname: str, detections: list) -> bool:
     try:
-        return channel.send(hostname, detection)
+        return channel.send(hostname, detections)
     except Exception as e:
         log.error("%s failed: %s", channel.__class__.__name__, e)
         return False

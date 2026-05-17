@@ -24,12 +24,13 @@ INSTALL_SERVICE_NAME    = "eccube-fim-check.service"
 @dataclass
 class NotifyEmail:
     """SMTP notification channel configuration."""
-    smtp_host: str
+    smtp_host: str = ""
     smtp_port: int = DEFAULT_SMTP_PORT
     smtp_user: str = ""
     smtp_password_file: str = ""
     from_addr: str = ""
     recipients: list[str] = field(default_factory=list)
+    enabled: bool = True
 
 
 @dataclass
@@ -75,8 +76,13 @@ def _validate(main: dict, targets: dict, notify: dict) -> None:
         raise FimConfigError("daemon.yaml: missing required key 'root_path'")
     if not targets.get("target_files"):
         raise FimConfigError("targets.yaml: 'target_files' is required and must not be empty")
-    if not notify.get("email", {}).get("smtp_host"):
-        raise FimConfigError("notify.yaml: email.smtp_host is required")
+    ec = notify.get("email", {})
+    email_on = ec.get("enabled", True)
+    if email_on and not ec.get("smtp_host"):
+        raise FimConfigError("notify.yaml: email.smtp_host is required when email is enabled")
+    slack_on = notify.get("slack", {}).get("enabled", False)
+    if not email_on and not slack_on:
+        raise FimConfigError("notify.yaml: at least one notification channel must be enabled")
 
 
 def _parse(main: dict, targets: dict, notify: dict) -> Config:
@@ -93,6 +99,7 @@ def _parse(main: dict, targets: dict, notify: dict) -> Config:
             smtp_password_file=ec.get("smtp_password_file", ""),
             from_addr=ec.get("from", ""),
             recipients=ec.get("recipients", []),
+            enabled=ec.get("enabled", True),
         ),
         slack=NotifySlack(
             enabled=sc.get("enabled", False),

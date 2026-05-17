@@ -1,0 +1,13 @@
+ファイル改竄の可能性を検知しました。
+
+■ 検知日時
+$detected_at
+
+■ サーバ
+$hostname
+
+■ 検知ファイル数
+$file_count 件
+
+■ 検知ファイルと差分
+$file_blocks
