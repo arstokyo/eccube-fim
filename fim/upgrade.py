@@ -94,25 +94,11 @@ def _stamp_version(lib_dir: str, version: str) -> None:
     version_file.write_text(text, encoding="utf-8")
 
 
-def upgrade(yes: bool = False, force: bool = False) -> int:
-    """Download the latest release and replace library + CLI binary.
+def _install_release(version: str, yes: bool) -> int:
+    """Prompt for confirmation, download `version`, replace library + binary.
 
-    Return 0 on success, 1 on network/API error. Raises SystemExit(1)
-    if the release requires a newer Python than the running interpreter.
+    Return 0 on success, 1 if the user cancels.
     """
-    if not _require_root():
-        return 1
-    try:
-        version, python_requires = _fetch_release_info()
-    except RuntimeError as e:
-        print(f"Error: {e}", file=sys.stderr)
-        return 1
-    _check_python_requires(python_requires)
-    latest_clean = version.lstrip("v")
-    if latest_clean == __version__ and not force:
-        print(f"Already at the latest version ({__version__}) — nothing to do.")
-        print("Use --force to reinstall anyway.")
-        return 0
     print(f"Latest version : {version}")
     print(f"Will replace   : {INSTALL_LIB_DIR}/fim  and  {INSTALL_SBIN_DIR}/eccube-fim")
     if not yes:
@@ -135,3 +121,25 @@ def upgrade(yes: bool = False, force: bool = False) -> int:
         os.chmod(dest_bin, 0o755)
     print(f"Upgrade to {version} complete")
     return 0
+
+
+def upgrade(yes: bool = False, force: bool = False) -> int:
+    """Download the latest release and replace library + CLI binary.
+
+    Return 0 on success, 1 on network/API error. Raises SystemExit(1)
+    if the release requires a newer Python than the running interpreter.
+    """
+    if not _require_root():
+        return 1
+    try:
+        version, python_requires = _fetch_release_info()
+    except RuntimeError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
+    _check_python_requires(python_requires)
+    latest_clean = version.lstrip("v")
+    if latest_clean == __version__ and not force:
+        print(f"Already at the latest version ({__version__}) — nothing to do.")
+        print("Use --force to reinstall anyway.")
+        return 0
+    return _install_release(version, yes)
