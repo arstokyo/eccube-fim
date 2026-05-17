@@ -69,7 +69,6 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--verbose", "-v", action="store_true",
                    help="Structured diagnostic output on stdout + DEBUG log level")
     sub = p.add_subparsers(dest="command", metavar="COMMAND")
-    sub.required = True
     _add_check_parser(sub)
     _add_validate_parser(sub)
     _add_test_mail_parser(sub)
@@ -86,7 +85,11 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
-    args = _build_parser().parse_args()
+    p = _build_parser()
+    args = p.parse_args()
+    if not hasattr(args, "func"):
+        p.print_help()
+        return 0
     if getattr(args, "needs_root", False) and not _require_root():
         return 1
     setup_logging(verbose=args.verbose)

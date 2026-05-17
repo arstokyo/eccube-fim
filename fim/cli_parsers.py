@@ -1,5 +1,7 @@
 import argparse
+from typing import Optional
 
+from fim.config import Config
 from fim.cli_commands import (
     cmd_config_show, cmd_config_edit,
     cmd_target_list, cmd_target_add, cmd_target_remove,
@@ -19,7 +21,12 @@ def add_status_parser(sub: argparse._SubParsersAction) -> None:
 def add_db_parser(sub: argparse._SubParsersAction) -> None:
     dp = sub.add_parser("db", help="inspect or clear the deduplication state database")
     dsub = dp.add_subparsers(dest="db_cmd", metavar="ACTION")
-    dsub.required = True
+
+    def _help(args: argparse.Namespace, cfg: Optional[Config]) -> int:
+        dp.print_help()
+        return 0
+
+    dp.set_defaults(func=_help, needs_config=False, needs_root=False)
 
     dsub.add_parser(
         "list",
@@ -53,7 +60,12 @@ def add_log_parser(sub: argparse._SubParsersAction) -> None:
 def add_config_parser(sub: argparse._SubParsersAction) -> None:
     cp = sub.add_parser("config", help="view or edit configuration files")
     csub = cp.add_subparsers(dest="config_cmd", metavar="ACTION")
-    csub.required = True
+
+    def _help(args: argparse.Namespace, cfg: Optional[Config]) -> int:
+        cp.print_help()
+        return 0
+
+    cp.set_defaults(func=_help, needs_config=False, needs_root=False)
 
     csub.add_parser(
         "show",
@@ -74,7 +86,12 @@ def add_config_parser(sub: argparse._SubParsersAction) -> None:
 def add_target_parser(sub: argparse._SubParsersAction) -> None:
     tp = sub.add_parser("target", help="manage monitored file list in targets.yaml")
     tsub = tp.add_subparsers(dest="target_cmd", metavar="ACTION")
-    tsub.required = True
+
+    def _help(args: argparse.Namespace, cfg: Optional[Config]) -> int:
+        tp.print_help()
+        return 0
+
+    tp.set_defaults(func=_help, needs_config=False, needs_root=False)
 
     tsub.add_parser(
         "list",
@@ -95,7 +112,12 @@ def add_target_parser(sub: argparse._SubParsersAction) -> None:
 def add_template_parser(sub: argparse._SubParsersAction) -> None:
     tp = sub.add_parser("template", help="list, view, edit, or reset notification templates")
     tsub = tp.add_subparsers(dest="template_cmd", metavar="ACTION")
-    tsub.required = True
+
+    def _help(args: argparse.Namespace, cfg: Optional[Config]) -> int:
+        tp.print_help()
+        return 0
+
+    tp.set_defaults(func=_help, needs_config=False, needs_root=False)
 
     tsub.add_parser(
         "list",
