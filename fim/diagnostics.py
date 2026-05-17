@@ -12,21 +12,29 @@ from fim.utils import JST
 log = logging.getLogger(__name__)
 
 
+def is_git_tracked(root_path: str, file_path: str) -> bool:
+    """Return True if file_path is tracked in the git repo at root_path.
+
+    Returns False for both "not tracked" and git-unreachable conditions.
+    """
+    try:
+        r = subprocess.run(
+            ["git", "-c", f"safe.directory={root_path}",
+             "ls-files", "--error-unmatch", file_path],
+            cwd=root_path, capture_output=True,
+        )
+        return r.returncode == 0
+    except OSError:
+        return False
+
+
 def _print_targets_table(cfg: Config) -> bool:
     """Print per-file git tracking status. Return True if all files are tracked."""
     print(f"{'FILE':<60} {'GIT':<14}")
     print("-" * 74)
     all_ok = True
     for path in cfg.target_files:
-        try:
-            r = subprocess.run(
-                ["git", "ls-files", "--error-unmatch", path],
-                cwd=cfg.root_path, capture_output=True,
-            )
-            tracked = r.returncode == 0
-        except OSError:
-            # root_path does not exist or is not accessible
-            tracked = False
+        tracked = is_git_tracked(cfg.root_path, path)
         if not tracked:
             all_ok = False
         status = "tracked" if tracked else "NOT IN GIT"

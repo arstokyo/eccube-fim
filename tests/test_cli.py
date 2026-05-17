@@ -22,13 +22,13 @@ def test_command_fails_when_not_root(monkeypatch, capsys, argv):
 
 
 @pytest.mark.parametrize("argv,mock_target,mock_return", [
-    (["eccube-fim", "check"], "fim.cli._cmd_check", 0),
-    (["eccube-fim", "validate"], "fim.cli._cmd_validate", 0),
-    (["eccube-fim", "test-mail"], "fim.cli._cmd_test_mail", 0),
+    (["eccube-fim", "check"], "fim.cli.cmd_check", 0),
+    (["eccube-fim", "validate"], "fim.cli.cmd_validate", 0),
+    (["eccube-fim", "test-mail"], "fim.cli.cmd_test_mail", 0),
     (["eccube-fim", "approve", "app/template/default/Shopping/index.twig"],
-     "fim.cli._cmd_approve", 0),
-    (["eccube-fim", "upgrade"], "fim.cli._cmd_upgrade", 0),
-    (["eccube-fim", "uninstall"], "fim.cli._cmd_uninstall", 0),
+     "fim.cli.cmd_approve", 0),
+    (["eccube-fim", "upgrade"], "fim.cli.cmd_upgrade", 0),
+    (["eccube-fim", "uninstall"], "fim.cli.cmd_uninstall", 0),
 ])
 def test_command_proceeds_when_root(monkeypatch, tmp_path, argv, mock_target, mock_return):
     monkeypatch.setattr("os.geteuid", lambda: 0)
