@@ -86,6 +86,13 @@ def _write_version_stamp(config_dir: str, version: str) -> None:
     (Path(config_dir) / ".version").write_text(version.lstrip("v") + "\n", encoding="utf-8")
 
 
+def _run_migrations(config_dir: str) -> int:
+    # deferred import — in production the lib has just been replaced on disk,
+    # so importing here loads the new fim/migration.py rather than a cached pre-upgrade version
+    import fim.migration as _m
+    return _m.run_migrations(config_dir)
+
+
 def _install_release(version: str, yes: bool, config_dir: str) -> int:
     """Prompt for confirmation, download `version`, replace library + binary.
 
@@ -107,6 +114,14 @@ def _install_release(version: str, yes: bool, config_dir: str) -> int:
         shutil.copytree(os.path.join(src, "fim"),
                         os.path.join(INSTALL_LIB_DIR, "fim"))
         _write_version_stamp(config_dir, version)
+        print("Running migrations...")
+        try:
+            count = _run_migrations(config_dir)
+            if count:
+                print(f"Applied {count} migration(s).")
+        except RuntimeError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1
         print("Replacing CLI binary...")
         dest_bin = os.path.join(INSTALL_SBIN_DIR, "eccube-fim")
         shutil.copy2(os.path.join(src, "bin", "eccube-fim"), dest_bin)

@@ -131,6 +131,7 @@ def test_upgrade_replaces_files(monkeypatch, tmp_path):
     monkeypatch.setattr("fim.upgrade._download_tarball", fake_download)
     monkeypatch.setattr("fim.upgrade.INSTALL_LIB_DIR",  str(lib_dir))
     monkeypatch.setattr("fim.upgrade.INSTALL_SBIN_DIR", str(sbin_dir))
+    monkeypatch.setattr("fim.upgrade._run_migrations",  lambda config_dir: 0)
 
     assert upgrade(yes=True, config_dir=str(config_dir)) == 0
     assert (lib_dir / "fim" / "cli.py").read_text() == "# updated"

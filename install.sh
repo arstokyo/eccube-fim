@@ -530,6 +530,9 @@ update_mode() {
     install_version_stamp
     install_cli
     install_logrotate
+    # run after new lib + binary are in place so new migration files are used
+    "$SBIN_DIR/eccube-fim" _migrate --config-dir "$CONFIG_DIR" \
+        || { error "Migrations failed — upgrade aborted"; exit 1; }
     # belt-and-suspenders: LogsDirectory handles this on service start, but update_mode
     # runs before the service restarts so old installs without LogsDirectory still get the dir
     mkdir -p "$LOG_DIR" && chmod 700 "$LOG_DIR" && chown root:root "$LOG_DIR"

@@ -1,4 +1,5 @@
 import argparse
+import sys
 from typing import Optional
 
 from fim.config import Config
@@ -42,7 +43,18 @@ def cmd_approve(args: argparse.Namespace, cfg: Config) -> int:
 
 def cmd_upgrade(args: argparse.Namespace, cfg: Optional[Config]) -> int:
     from fim.upgrade import upgrade
-    return upgrade(yes=args.yes, force=args.force)
+    return upgrade(yes=args.yes, force=args.force, config_dir=args.config_dir)
+
+
+def cmd_migrate(args: argparse.Namespace, cfg: Optional[Config]) -> int:
+    from fim.migration import run_migrations
+    try:
+        count = run_migrations(args.config_dir)
+    except RuntimeError as e:
+        print(f"Migration error: {e}", file=sys.stderr)
+        return 1
+    print(f"Migrations applied: {count}")
+    return 0
 
 
 def cmd_uninstall(args: argparse.Namespace, cfg: Optional[Config]) -> int:

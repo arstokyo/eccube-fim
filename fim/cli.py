@@ -9,7 +9,7 @@ from fim.lifecycle import _require_root
 from fim.log import setup_logging
 from fim.cli_commands import (
     cmd_check, cmd_validate, cmd_approve,
-    cmd_upgrade, cmd_uninstall,
+    cmd_upgrade, cmd_uninstall, cmd_migrate,
 )
 from fim.cli_parsers import (
     add_status_parser, add_db_parser, add_log_parser,
@@ -50,6 +50,13 @@ def _add_upgrade_parser(sub: argparse._SubParsersAction) -> None:
     sp.set_defaults(func=cmd_upgrade, needs_config=False, needs_root=True)
 
 
+def _add_migrate_parser(sub: argparse._SubParsersAction) -> None:
+    # internal command called by install.sh --update; hidden from user-facing help
+    sub.add_parser("_migrate", help=argparse.SUPPRESS).set_defaults(
+        func=cmd_migrate, needs_config=False, needs_root=True,
+    )
+
+
 def _add_uninstall_parser(sub: argparse._SubParsersAction) -> None:
     sp = sub.add_parser("uninstall", help="stop service and remove all installed files")
     sp.add_argument("--keep-config", action="store_true",
@@ -75,6 +82,7 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_approve_parser(sub)
     _add_upgrade_parser(sub)
     _add_uninstall_parser(sub)
+    _add_migrate_parser(sub)
     add_status_parser(sub)
     add_db_parser(sub)
     add_log_parser(sub)

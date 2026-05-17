@@ -124,6 +124,7 @@ _INSTALL_PATCHES = [
     "fim.upgrade._download_tarball",
     "fim.upgrade._find_extracted_root",
     "fim.upgrade._write_version_stamp",
+    "fim.upgrade._run_migrations",
     "shutil.rmtree",
     "shutil.copytree",
     "shutil.copy2",
@@ -133,7 +134,12 @@ _INSTALL_PATCHES = [
 
 def _patch_install(stack: ExitStack, tmp_path: str) -> None:
     for target in _INSTALL_PATCHES:
-        kw = {"return_value": tmp_path} if target == "fim.upgrade._find_extracted_root" else {}
+        if target == "fim.upgrade._find_extracted_root":
+            kw = {"return_value": tmp_path}
+        elif target == "fim.upgrade._run_migrations":
+            kw = {"return_value": 0}
+        else:
+            kw = {}
         stack.enter_context(patch(target, **kw))
 
 
