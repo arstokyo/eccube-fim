@@ -42,7 +42,7 @@ def cmd_approve(args: argparse.Namespace, cfg: Config) -> int:
 
 def cmd_upgrade(args: argparse.Namespace, cfg: Optional[Config]) -> int:
     from fim.upgrade import upgrade
-    return upgrade(yes=args.yes)
+    return upgrade(yes=args.yes, force=args.force)
 
 
 def cmd_uninstall(args: argparse.Namespace, cfg: Optional[Config]) -> int:

@@ -45,6 +45,8 @@ def _add_upgrade_parser(sub: argparse._SubParsersAction) -> None:
     sp = sub.add_parser("upgrade", help="download and install the latest release")
     sp.add_argument("--yes", "-y", action="store_true",
                     help="skip confirmation prompt")
+    sp.add_argument("--force", "-f", action="store_true",
+                    help="reinstall even if already at the latest version")
     sp.set_defaults(func=cmd_upgrade, needs_config=False, needs_root=True)
 
 

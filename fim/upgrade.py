@@ -10,7 +10,7 @@ from pathlib import Path
 
 from fim.config import INSTALL_SBIN_DIR, INSTALL_LIB_DIR
 from fim.lifecycle import _require_root
-from fim.version import REPO_SLUG, VERSION_CHECK_URL, _FETCH_TIMEOUT
+from fim.version import __version__, REPO_SLUG, VERSION_CHECK_URL, _FETCH_TIMEOUT
 
 
 def _fetch_release_info() -> tuple[str, str]:
@@ -94,7 +94,7 @@ def _stamp_version(lib_dir: str, version: str) -> None:
     version_file.write_text(text, encoding="utf-8")
 
 
-def upgrade(yes: bool = False) -> int:
+def upgrade(yes: bool = False, force: bool = False) -> int:
     """Download the latest release and replace library + CLI binary.
 
     Return 0 on success, 1 on network/API error. Raises SystemExit(1)
@@ -108,6 +108,11 @@ def upgrade(yes: bool = False) -> int:
         print(f"Error: {e}", file=sys.stderr)
         return 1
     _check_python_requires(python_requires)
+    latest_clean = version.lstrip("v")
+    if latest_clean == __version__ and not force:
+        print(f"Already at the latest version ({__version__}) — nothing to do.")
+        print("Use --force to reinstall anyway.")
+        return 0
     print(f"Latest version : {version}")
     print(f"Will replace   : {INSTALL_LIB_DIR}/fim  and  {INSTALL_SBIN_DIR}/eccube-fim")
     if not yes:
