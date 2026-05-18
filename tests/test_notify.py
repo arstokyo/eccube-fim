@@ -1,18 +1,32 @@
-from fim.config import NotifyEmail
-from fim.notify import dispatch_notifications
+import pytest
+from fim.config import Config, NotifyEmail, NotifySlack
+from fim.notify import dispatch_notifications, build_channels
+from fim.notify.base import RenderedNotification
 from fim.notify.email import EmailChannel
+from fim.notify.slack import SlackChannel
 
 
-def _detection():
-    return {
-        "path": "index.twig",
-        "full_path": "/shop/index.twig",
-        "root_path": "/shop",
-        "git_status": " M index.twig",
-        "diff": "+tampered",
-        "mtime": "2026-05-15 12:00:00 JST",
-        "sha256": "abc123",
-    }
+@pytest.fixture
+def make_config():
+    def _make(email_enabled: bool, slack_enabled: bool) -> Config:
+        return Config(
+            root_path="/x",
+            target_files=[],
+            email=NotifyEmail(
+                enabled=email_enabled,
+                recipients=["a@b.com"],
+                smtp_host="localhost",
+                smtp_port=25,
+                from_addr="fim@x.com",
+                smtp_user="",
+                smtp_password_file="",
+            ),
+            slack=NotifySlack(
+                enabled=slack_enabled,
+                webhook_url_files=[],
+            ),
+        )
+    return _make
 
 
 class DummyChannel:
@@ -22,8 +36,8 @@ class DummyChannel:
         self.result = result
         self.calls = []
 
-    def send(self, hostname: str, detections: list[dict]) -> bool:
-        self.calls.append((hostname, detections))
+    def send(self, notification: RenderedNotification) -> bool:
+        self.calls.append(notification)
         return self.result
 
 
@@ -46,11 +60,14 @@ def test_email_channel_sends_rendered_message(monkeypatch, tmp_path):
 
     monkeypatch.setattr("fim.notify.email._send_smtp", fake_send_smtp)
 
-    assert EmailChannel(cfg).send("host-a", [_detection()]) is True
+    notification = RenderedNotification(
+        subject="[ALERT] host-a",
+        bodies={"email": "/shop/index.twig was tampered\n+tampered"},
+    )
+    assert EmailChannel(cfg).send(notification) is True
     assert sent["cfg"] is cfg
-    assert "[ALERT]" in sent["subject"]
+    assert sent["subject"] == "[ALERT] host-a"
     assert "/shop/index.twig" in sent["body"]
-    assert "+tampered" in sent["body"]
 
 
 def test_email_channel_returns_false_on_failure(monkeypatch):
@@ -61,38 +78,62 @@ def test_email_channel_returns_false_on_failure(monkeypatch):
 
     monkeypatch.setattr("fim.notify.email._send_smtp", fail_send_smtp)
 
-    assert EmailChannel(cfg).send("host-a", [_detection()]) is False
+    notification = RenderedNotification(subject="[ALERT]", bodies={"email": "body"})
+    assert EmailChannel(cfg).send(notification) is False
 
 
-def test_dispatch_notifications_calls_each_channel_once_with_full_list():
+def test_dispatch_notifications_calls_each_channel_once_with_rendered_notification():
     first = DummyChannel()
     second = DummyChannel()
-    detections = [_detection(), dict(_detection(), path="admin.twig")]
 
-    ok = dispatch_notifications([first, second], "host-a", detections, dry_run=False)
+    ok = dispatch_notifications([first, second], "host-a", [], dry_run=False)
 
     assert ok is True
     assert len(first.calls) == 1
     assert len(second.calls) == 1
-    assert first.calls[0] == ("host-a", detections)
-    assert second.calls[0] == ("host-a", detections)
+    # both channels received the same RenderedNotification object
+    assert first.calls[0] is second.calls[0]
 
 
 def test_dispatch_notifications_reports_channel_failure():
     ok = dispatch_notifications(
         [DummyChannel(result=True), DummyChannel(result=False)],
-        "host-a",
-        [_detection()],
-        dry_run=False,
+        "host-a", [], dry_run=False,
     )
-
     assert ok is False
 
 
 def test_dispatch_notifications_dry_run_skips_channels():
     channel = DummyChannel()
 
-    ok = dispatch_notifications([channel], "host-a", [_detection()], dry_run=True)
+    ok = dispatch_notifications([channel], "host-a", [], dry_run=True)
 
     assert ok is True
     assert channel.calls == []
+
+
+def test_build_channels_email_only(make_config):
+    """Only email channel built when slack disabled."""
+    cfg = make_config(email_enabled=True, slack_enabled=False)
+    channels = build_channels(cfg)
+    assert len(channels) == 1
+    assert isinstance(channels[0], EmailChannel)
+
+
+def test_build_channels_slack_only(make_config):
+    cfg = make_config(email_enabled=False, slack_enabled=True)
+    channels = build_channels(cfg)
+    assert len(channels) == 1
+    assert isinstance(channels[0], SlackChannel)
+
+
+def test_build_channels_both(make_config):
+    cfg = make_config(email_enabled=True, slack_enabled=True)
+    channels = build_channels(cfg)
+    assert len(channels) == 2
+
+
+def test_build_channels_none_returns_empty(make_config):
+    """build_channels returns [] when all channels disabled; load_config guards enabled check."""
+    cfg = make_config(email_enabled=False, slack_enabled=False)
+    assert build_channels(cfg) == []

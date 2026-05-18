@@ -19,6 +19,8 @@ INSTALL_LOGROTATE_PATH  = "/etc/logrotate.d/eccube-fim"
 INSTALL_TMPFILES_PATH   = "/etc/tmpfiles.d/eccube-fim.conf"
 INSTALL_TIMER_NAME      = "eccube-fim-check.timer"
 INSTALL_SERVICE_NAME    = "eccube-fim-check.service"
+# /run is tmpfs on systemd; stamp disappears after reboot — forces a fresh check after restart
+VERSION_CHECK_STAMP     = "/run/eccube-fim/version_check"
 
 
 @dataclass
@@ -51,6 +53,13 @@ class Config:
     state_db: str = DEFAULT_STATE_DB
     heartbeat_enabled: bool = True
     heartbeat_file: str = DEFAULT_HEARTBEAT_FILE
+    config_dir: str = DEFAULT_CONFIG_DIR
+
+
+def validate_targets(data: dict) -> None:
+    """Raise FimConfigError if the targets dict is structurally invalid."""
+    if not data.get("target_files"):
+        raise FimConfigError("targets.yaml: 'target_files' is required and must not be empty")
 
 
 def load_config(config_dir: str = DEFAULT_CONFIG_DIR) -> Config:
@@ -60,7 +69,9 @@ def load_config(config_dir: str = DEFAULT_CONFIG_DIR) -> Config:
     targets = _load_yaml(d / "targets.yaml")
     notify  = _load_yaml(d / "notify.yaml")
     _validate(main, targets, notify)
-    return _parse(main, targets, notify)
+    cfg = _parse(main, targets, notify)
+    cfg.config_dir = config_dir
+    return cfg
 
 
 def _load_yaml(path: Path) -> dict:

@@ -15,7 +15,7 @@ from fim.cli_parsers import (
     add_status_parser, add_db_parser, add_log_parser,
     add_config_parser, add_target_parser, add_template_parser,
 )
-from fim.cli_parsers_test import add_test_parser
+from fim.cli_parsers_diag import add_test_parser
 
 
 def _add_check_parser(sub: argparse._SubParsersAction) -> None:
@@ -106,8 +106,6 @@ def main() -> int:
     if getattr(args, "needs_root", False) and not _require_root():
         return 1
     setup_logging(verbose=args.verbose)
-    from fim.template import set_override_dir
-    set_override_dir(args.config_dir)
     cfg: Optional[Config] = None
     if getattr(args, "needs_config", True):
         try:

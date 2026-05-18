@@ -5,10 +5,10 @@ from dataclasses import dataclass, field
 @dataclass
 class _Report:
     """Accumulates verbose diagnostic data during one detection cycle."""
-    config_lines: list = field(default_factory=list)
-    target_lines: list = field(default_factory=list)
-    suppression_lines: list = field(default_factory=list)
-    notification_lines: list = field(default_factory=list)
+    config_lines: list[str] = field(default_factory=list)
+    target_lines: list[str] = field(default_factory=list)
+    suppression_lines: list[str] = field(default_factory=list)
+    notification_lines: list[str] = field(default_factory=list)
     heartbeat_line: str = ""
 
 

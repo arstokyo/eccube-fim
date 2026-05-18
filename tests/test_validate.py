@@ -1,7 +1,7 @@
 import subprocess
 import pytest
 from fim.config import Config, NotifyEmail, NotifySlack
-from fim.diagnostics import validate_config, send_test_mail, send_test_slack
+from fim.validate import validate_config, send_test_mail, send_test_slack
 
 
 @pytest.fixture
@@ -30,21 +30,23 @@ def diag_cfg(repo, email_cfg):
 
 
 def test_send_test_mail_returns_1_when_channel_returns_false(monkeypatch, diag_cfg, capsys):
-    monkeypatch.setattr("fim.diagnostics.EmailChannel.send", lambda self, h, ds: False)
+    monkeypatch.setattr("fim.validate.send_test_notification",
+                        lambda cfg, h: {"EmailChannel": False})
     assert send_test_mail(diag_cfg) == 1
     assert "FAILED" in capsys.readouterr().err
 
 
 def test_send_test_mail_returns_0_on_success(monkeypatch, diag_cfg, capsys):
-    monkeypatch.setattr("fim.diagnostics.EmailChannel.send", lambda self, h, ds: True)
+    monkeypatch.setattr("fim.validate.send_test_notification",
+                        lambda cfg, h: {"EmailChannel": True})
     assert send_test_mail(diag_cfg) == 0
     assert "Test email sent successfully" in capsys.readouterr().out
 
 
 def test_send_test_mail_returns_1_on_exception(monkeypatch, diag_cfg):
-    def _raise(self, h, ds):
+    def _raise(cfg, h):
         raise OSError("connection refused")
-    monkeypatch.setattr("fim.diagnostics.EmailChannel.send", _raise)
+    monkeypatch.setattr("fim.validate.send_test_notification", _raise)
     assert send_test_mail(diag_cfg) == 1
 
 
@@ -57,7 +59,8 @@ def test_send_test_slack_disabled_returns_1(diag_cfg, capsys):
 def test_send_test_slack_returns_0_on_success(monkeypatch, diag_cfg, capsys):
     diag_cfg.slack.enabled = True
     diag_cfg.slack.webhook_url_files = ["/tmp/fake_webhook"]
-    monkeypatch.setattr("fim.diagnostics.SlackChannel.send", lambda self, h, ds: True)
+    monkeypatch.setattr("fim.validate.send_test_notification",
+                        lambda cfg, h: {"SlackChannel": True})
     assert send_test_slack(diag_cfg) == 0
     assert "Test Slack message sent successfully" in capsys.readouterr().out
 
@@ -65,7 +68,8 @@ def test_send_test_slack_returns_0_on_success(monkeypatch, diag_cfg, capsys):
 def test_send_test_slack_returns_1_on_failure(monkeypatch, diag_cfg, capsys):
     diag_cfg.slack.enabled = True
     diag_cfg.slack.webhook_url_files = ["/tmp/fake_webhook"]
-    monkeypatch.setattr("fim.diagnostics.SlackChannel.send", lambda self, h, ds: False)
+    monkeypatch.setattr("fim.validate.send_test_notification",
+                        lambda cfg, h: {"SlackChannel": False})
     assert send_test_slack(diag_cfg) == 1
     assert "FAILED" in capsys.readouterr().err
 

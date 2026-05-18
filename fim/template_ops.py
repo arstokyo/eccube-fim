@@ -106,25 +106,22 @@ def reset_template(config_dir: str, name: str) -> int:
 
 
 def preview_template(config_dir: str) -> int:
-    """Render all templates with sample data and print the result.
-
-    Relies on set_override_dir() having been called by main() beforehand.
-    """
+    """Render all templates with sample data and print the result."""
     hostname = socket.gethostname()
     print("=" * 60)
     print("SUBJECT")
     print("=" * 60)
-    print(render_subject(hostname))
+    print(render_subject(hostname, config_dir))
     print()
     print("=" * 60)
     print("EMAIL BODY")
     print("=" * 60)
-    print(render_email_body(hostname, _SAMPLE_DETECTIONS))
+    print(render_email_body(hostname, _SAMPLE_DETECTIONS, config_dir))
     print()
     print("=" * 60)
     print("SLACK BODY")
     print("=" * 60)
-    print(render_slack_body(hostname, _SAMPLE_DETECTIONS))
+    print(render_slack_body(hostname, _SAMPLE_DETECTIONS, config_dir))
     return 0
 
 

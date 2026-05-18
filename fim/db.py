@@ -1,7 +1,7 @@
 import sqlite3
 from datetime import datetime
 from functools import wraps
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 from fim.exceptions import FimDbError
 from fim.utils import JST
@@ -39,6 +39,12 @@ class Db:
         except sqlite3.OperationalError as e:
             raise FimDbError(f"Cannot open state DB '{db_path}': {e}") from e
 
+    def __enter__(self) -> "Db":
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        self.close()
+
     def close(self) -> None:
         self._conn.close()
 
@@ -63,3 +69,30 @@ class Db:
             "(file_path, content_sha256, last_notified_at) VALUES (?,?,?)",
             (file_path, sha256, int(datetime.now(JST).timestamp())),
         )
+
+    @db_transaction
+    def list_records(self, cur: sqlite3.Cursor) -> list:
+        """Return all (file_path, content_sha256, last_notified_at) rows, newest first."""
+        return cur.execute(
+            "SELECT file_path, content_sha256, last_notified_at "
+            "FROM notifications ORDER BY last_notified_at DESC"
+        ).fetchall()
+
+    @db_transaction
+    def clear_records(self, cur: sqlite3.Cursor,
+                      file_path: Optional[str] = None) -> int:
+        """Delete records for file_path (or all records if None). Return count deleted."""
+        if file_path:
+            cur.execute("DELETE FROM notifications WHERE file_path=?", (file_path,))
+        else:
+            cur.execute("DELETE FROM notifications")
+        return cur.rowcount
+
+    def record_count(self) -> int:
+        """Return total number of suppressed-file records. Returns 0 on DB error."""
+        # read-only SELECT; @db_transaction not needed — no mutation or rollback required
+        try:
+            row = self._conn.execute("SELECT COUNT(*) FROM notifications").fetchone()
+            return row[0] if row else 0
+        except sqlite3.Error:
+            return 0

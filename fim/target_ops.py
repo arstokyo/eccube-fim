@@ -4,8 +4,8 @@ from pathlib import Path
 
 import yaml
 
-from fim.config import load_config
-from fim.diagnostics import is_git_tracked
+from fim.config import load_config, validate_targets
+from fim.git import is_git_tracked
 from fim.exceptions import FimConfigError
 
 
@@ -46,14 +46,21 @@ def add_target(config_dir: str, file_path: str) -> int:
     if file_path in (data.get("target_files") or []):
         print(f"Already monitored: {file_path}")
         return 0
-    path.write_text(_insert_target(text, file_path), encoding="utf-8")
+    new_text = _insert_target(text, file_path)
+    new_data = yaml.safe_load(new_text) or {}
     try:
-        cfg = load_config(config_dir)
+        validate_targets(new_data)
     except FimConfigError as e:
         print(f"Config error after change — please fix:\n  {e}", file=sys.stderr)
         return 1
+    path.write_text(new_text, encoding="utf-8")
     print(f"Added: {file_path}")
-    _warn_if_not_git_tracked(cfg.root_path, file_path)
+    try:
+        cfg = load_config(config_dir)
+        _warn_if_not_git_tracked(cfg.root_path, file_path)
+    except FimConfigError:
+        # best-effort — no warning when daemon.yaml is absent or malformed
+        pass
     return 0
 
 
@@ -122,10 +129,12 @@ def _last_target_entry_index(lines: list[str]) -> int:
 
 
 def _validate_and_report(config_dir: str, success_msg: str) -> int:
+    path = _targets_path(config_dir)
     try:
-        load_config(config_dir)
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        validate_targets(data)
         print(success_msg)
         return 0
-    except FimConfigError as e:
+    except (OSError, FimConfigError) as e:
         print(f"Config error after change — please fix:\n  {e}", file=sys.stderr)
         return 1

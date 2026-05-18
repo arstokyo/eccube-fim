@@ -19,9 +19,9 @@ def test_modified_target_detected(cfg, db, repo):
     (repo / "index.twig").write_text("tampered <script src='/evil.js'></script>\n")
     results = run_detection(cfg, db)
     assert len(results) == 1
-    assert results[0]["path"] == "index.twig"
-    assert results[0]["full_path"].endswith("index.twig")
-    assert results[0]["root_path"] == str(repo)
+    assert results[0].path == "index.twig"
+    assert results[0].full_path.endswith("index.twig")
+    assert results[0].root_path == str(repo)
 
 
 def test_non_target_file_ignored(cfg, db, repo):
@@ -39,7 +39,7 @@ def test_suppression_within_window(cfg, db, repo):
     assert len(first) == 1
     # simulate what run() does after dispatch — record so next call suppresses
     for d in first:
-        db.record(d["path"], d["sha256"])
+        db.record(d.path, d.sha256)
     results = run_detection(cfg, db)
     assert results == []
 
@@ -49,7 +49,7 @@ def test_different_diff_not_suppressed(cfg, db, repo):
     (repo / "index.twig").write_text("tampered v1\n")
     first = run_detection(cfg, db)
     for d in first:
-        db.record(d["path"], d["sha256"])
+        db.record(d.path, d.sha256)
     (repo / "index.twig").write_text("tampered v2 — different change\n")
     second = run_detection(cfg, db)
     assert len(second) == 1
@@ -60,7 +60,7 @@ def test_deleted_file_detected(cfg, db, repo):
     (repo / "index.twig").unlink()
     results = run_detection(cfg, db)
     assert len(results) == 1
-    assert results[0]["diff"] == "(file deleted)"
+    assert results[0].diff == "(file deleted)"
 
 
 def test_run_dry_run_no_record(cfg, tmp_path, repo):

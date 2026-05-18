@@ -120,3 +120,14 @@ def test_add_warns_when_git_unreachable(config_dir, capsys):
     with patch("fim.target_ops.is_git_tracked", return_value=False):
         add_target(config_dir, "app/template/default/Block/header.twig")
     assert "eccube-fim validate" in capsys.readouterr().err
+
+
+def test_add_target_succeeds_without_daemon_yaml(tmp_path, capsys):
+    """target add works even when daemon.yaml is absent (no cross-file dep)."""
+    targets = tmp_path / "targets.yaml"
+    targets.write_text("target_files:\n  - app/existing.twig\n")
+    with patch("fim.target_ops.is_git_tracked", return_value=True):
+        result = add_target(str(tmp_path), "app/new.twig")
+    assert result == 0
+    text = targets.read_text()
+    assert "app/new.twig" in text

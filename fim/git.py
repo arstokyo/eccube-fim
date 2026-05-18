@@ -55,3 +55,19 @@ def file_mtime(root_path: str, filepath: str) -> str:
         return datetime.fromtimestamp(mtime, tz=JST).strftime("%Y-%m-%d %H:%M:%S JST")
     except OSError:
         return "(file not found)"
+
+
+def is_git_tracked(root_path: str, file_path: str) -> bool:
+    """Return True if file_path is tracked in the git repo at root_path.
+
+    Returns False for both "not tracked" and git-unreachable conditions.
+    """
+    try:
+        r = subprocess.run(
+            ["git", *_safe_dir_flag(root_path),
+             "ls-files", "--error-unmatch", file_path],
+            cwd=root_path, capture_output=True,
+        )
+        return r.returncode == 0
+    except OSError:
+        return False

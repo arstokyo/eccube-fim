@@ -4,7 +4,7 @@ from unittest.mock import patch
 import pytest
 
 from fim.config import Config, NotifyEmail, NotifySlack
-from fim.observe_db import db_list, db_clear
+from fim.observe import db_list, db_clear
 
 
 @pytest.fixture

@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 from fim.config import Config, NotifyEmail, NotifySlack, load_config
-from fim.diagnostics import validate_config
+from fim.validate import validate_config
 from fim.exceptions import FimConfigError
 
 _VALID_FILES = {"daemon", "targets", "notify"}

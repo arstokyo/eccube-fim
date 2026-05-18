@@ -6,16 +6,18 @@ from typing import Optional
 
 from fim.config import Config
 from fim.db import Db
+from fim.detection import Detection
 from fim.git import git_status, git_diff, file_mtime
 from fim.heartbeat import write_heartbeat
 from fim.notify import build_channels, dispatch_notifications
+from fim.notify.base import Channel
 from fim.report import _Report, print_verbose_report
 
 log = logging.getLogger(__name__)
 
 
 def _check_target(path: str, changed: dict, cfg: Config, db: Db,
-                  report: Optional[_Report]) -> Optional[dict]:
+                  report: Optional[_Report]) -> Optional[Detection]:
     status = changed.get(path, "")
     has_change = bool(status) and any(c in status for c in ("M", "D"))
     if report is not None:
@@ -46,20 +48,20 @@ def _add_suppression_report(report: _Report, path: str, sha256: str,
 
 
 def _detection(path: str, status: str, diff: str,
-               sha256: str, cfg: Config) -> dict:
-    return {
-        "path": path,
-        "full_path": str(Path(cfg.root_path) / path),
-        "root_path": cfg.root_path,
-        "git_status": status,
-        "diff": diff,
-        "mtime": file_mtime(cfg.root_path, path),
-        "sha256": sha256,
-    }
+               sha256: str, cfg: Config) -> Detection:
+    return Detection(
+        path=path,
+        full_path=str(Path(cfg.root_path) / path),
+        root_path=cfg.root_path,
+        git_status=status,
+        diff=diff,
+        mtime=file_mtime(cfg.root_path, path),
+        sha256=sha256,
+    )
 
 
 def run_detection(cfg: Config, db: Db,
-                  report: Optional[_Report] = None) -> list:
+                  report: Optional[_Report] = None) -> list[Detection]:
     changed = git_status(cfg.root_path)
     log.debug("git status: %d changed entries", len(changed))
     results = []
@@ -70,9 +72,11 @@ def run_detection(cfg: Config, db: Db,
     return results
 
 
-def _notify_and_record(channels: list, hostname: str, to_notify: list,
-                       dry_run: bool, db: Db, report: Optional[_Report]) -> bool:
-    sent = dispatch_notifications(channels, hostname, to_notify, dry_run)
+def _notify_and_record(channels: list[Channel], hostname: str, to_notify: list[Detection],
+                       cfg: Config, dry_run: bool, db: Db,
+                       report: Optional[_Report]) -> bool:
+    sent = dispatch_notifications(channels, hostname, to_notify, dry_run,
+                                  config_dir=cfg.config_dir)
     if report is not None:
         if dry_run:
             report.notification_lines.append("  (dry-run: no notifications sent)")
@@ -86,11 +90,11 @@ def _notify_and_record(channels: list, hostname: str, to_notify: list,
         return False
     if not dry_run:
         for d in to_notify:
-            db.record(d["path"], d["sha256"])
+            db.record(d.path, d.sha256)
     return True
 
 
-def _populate_config_report(cfg: Config, channels: list, report: _Report) -> None:
+def _populate_config_report(cfg: Config, channels: list[Channel], report: _Report) -> None:
     channel_names = ", ".join(
         c.__class__.__name__.replace("Channel", "").lower() for c in channels
     )
@@ -104,14 +108,14 @@ def _populate_config_report(cfg: Config, channels: list, report: _Report) -> Non
     ]
 
 
-def _run_cycle(cfg: Config, db: Db, channels: list, dry_run: bool,
+def _run_cycle(cfg: Config, db: Db, channels: list[Channel], dry_run: bool,
                report: Optional[_Report]) -> int:
     to_notify = run_detection(cfg, db, report)
     if not to_notify:
         log.info("No new alerts")
         return 0
     ok = _notify_and_record(channels, socket.gethostname(),
-                            to_notify, dry_run, db, report)
+                            to_notify, cfg, dry_run, db, report)
     return 0 if ok else 1
 
 

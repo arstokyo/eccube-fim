@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import pytest
 
-from fim.observe_log import log_tail
+from fim.observe import log_tail
 
 
 @pytest.fixture
@@ -22,7 +22,7 @@ def log_file(tmp_path):
 
 
 def test_log_tail_default(log_file, capsys, monkeypatch):
-    monkeypatch.setattr("fim.observe_log._LOG_PATH", log_file)
+    monkeypatch.setattr("fim.observe._LOG_PATH", log_file)
     rc = log_tail(lines=20, level=None)
     assert rc == 0
     out = capsys.readouterr().out
@@ -32,7 +32,7 @@ def test_log_tail_default(log_file, capsys, monkeypatch):
 
 
 def test_log_tail_limits_lines(log_file, capsys, monkeypatch):
-    monkeypatch.setattr("fim.observe_log._LOG_PATH", log_file)
+    monkeypatch.setattr("fim.observe._LOG_PATH", log_file)
     log_tail(lines=2, level=None)
     out = capsys.readouterr().out
     lines = [ln for ln in out.splitlines() if ln.strip()]
@@ -42,7 +42,7 @@ def test_log_tail_limits_lines(log_file, capsys, monkeypatch):
 
 
 def test_log_tail_filter_error(log_file, capsys, monkeypatch):
-    monkeypatch.setattr("fim.observe_log._LOG_PATH", log_file)
+    monkeypatch.setattr("fim.observe._LOG_PATH", log_file)
     rc = log_tail(lines=20, level="ERROR")
     assert rc == 0
     out = capsys.readouterr().out
@@ -51,7 +51,7 @@ def test_log_tail_filter_error(log_file, capsys, monkeypatch):
 
 
 def test_log_tail_filter_info(log_file, capsys, monkeypatch):
-    monkeypatch.setattr("fim.observe_log._LOG_PATH", log_file)
+    monkeypatch.setattr("fim.observe._LOG_PATH", log_file)
     log_tail(lines=20, level="INFO")
     out = capsys.readouterr().out
     assert "DEBUG" not in out
@@ -60,14 +60,14 @@ def test_log_tail_filter_info(log_file, capsys, monkeypatch):
 
 
 def test_log_tail_filter_no_matches(log_file, capsys, monkeypatch):
-    monkeypatch.setattr("fim.observe_log._LOG_PATH", log_file)
+    monkeypatch.setattr("fim.observe._LOG_PATH", log_file)
     log_tail(lines=20, level="CRITICAL")
     out = capsys.readouterr().out
     assert "no CRITICAL log entries" in out
 
 
 def test_log_tail_file_not_found(tmp_path, capsys, monkeypatch):
-    monkeypatch.setattr("fim.observe_log._LOG_PATH", tmp_path / "nonexistent.log")
+    monkeypatch.setattr("fim.observe._LOG_PATH", tmp_path / "nonexistent.log")
     rc = log_tail(lines=20, level=None)
     assert rc == 1
     assert "not found" in capsys.readouterr().err
@@ -76,7 +76,7 @@ def test_log_tail_file_not_found(tmp_path, capsys, monkeypatch):
 def test_log_tail_unreadable_file(tmp_path, capsys, monkeypatch):
     log_file = tmp_path / "check.log"
     log_file.write_text("data", encoding="utf-8")
-    monkeypatch.setattr("fim.observe_log._LOG_PATH", log_file)
+    monkeypatch.setattr("fim.observe._LOG_PATH", log_file)
     real_open = builtins.open
 
     def _raise(path, *a, **kw):
@@ -93,6 +93,6 @@ def test_log_tail_unreadable_file(tmp_path, capsys, monkeypatch):
 def test_log_tail_empty_file(tmp_path, capsys, monkeypatch):
     log_file = tmp_path / "check.log"
     log_file.write_text("", encoding="utf-8")
-    monkeypatch.setattr("fim.observe_log._LOG_PATH", log_file)
+    monkeypatch.setattr("fim.observe._LOG_PATH", log_file)
     log_tail(lines=20, level=None)
     assert "no log entries" in capsys.readouterr().out

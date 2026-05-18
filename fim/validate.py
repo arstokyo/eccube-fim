@@ -1,32 +1,13 @@
 import logging
 import socket
-import subprocess
 import sys
-from datetime import datetime
 from pathlib import Path
 
 from fim.config import Config
-from fim.notify.email import EmailChannel
-from fim.notify.slack import SlackChannel
-from fim.utils import JST
+from fim.git import is_git_tracked
+from fim.notify import send_test_notification
 
 log = logging.getLogger(__name__)
-
-
-def is_git_tracked(root_path: str, file_path: str) -> bool:
-    """Return True if file_path is tracked in the git repo at root_path.
-
-    Returns False for both "not tracked" and git-unreachable conditions.
-    """
-    try:
-        r = subprocess.run(
-            ["git", "-c", f"safe.directory={root_path}",
-             "ls-files", "--error-unmatch", file_path],
-            cwd=root_path, capture_output=True,
-        )
-        return r.returncode == 0
-    except OSError:
-        return False
 
 
 def _print_targets_table(cfg: Config) -> bool:
@@ -70,35 +51,21 @@ def validate_config(cfg: Config) -> bool:
     return all_ok
 
 
-def _build_test_detection(cfg: Config, now: str) -> dict:
-    return {
-        "path": "(test)",
-        "full_path": "(test)",
-        "root_path": cfg.root_path,
-        "git_status": "",
-        "diff": "(This is a test — no tampering was detected.)",
-        "mtime": now,
-        "sha256": "",
-    }
-
-
 def send_test_mail(cfg: Config) -> int:
     """Send a test email using the configured SMTP settings. Return 0 on success."""
     if not cfg.email.enabled:
         print("Email is disabled in notify.yaml — nothing to test.", file=sys.stderr)
         return 1
-    now = datetime.now(JST).strftime("%Y-%m-%d %H:%M:%S JST")
     print(f"Sending test email to {cfg.email.recipients} "
           f"via {cfg.email.smtp_host}:{cfg.email.smtp_port} ...")
-    detection = _build_test_detection(cfg, now)
     try:
-        ok = EmailChannel(cfg.email).send(socket.gethostname(), [detection])
-        if not ok:
-            print("FAILED: email send failed", file=sys.stderr)
-            return 1
+        results = send_test_notification(cfg, socket.gethostname())
     except Exception as e:
         log.error("Test email failed: %s", e)
         print(f"FAILED: {e}", file=sys.stderr)
+        return 1
+    if not results.get("EmailChannel", False):
+        print("FAILED: email send failed", file=sys.stderr)
         return 1
     print("Test email sent successfully")
     return 0
@@ -109,18 +76,16 @@ def send_test_slack(cfg: Config) -> int:
     if not cfg.slack.enabled:
         print("Slack is disabled in notify.yaml — nothing to test.", file=sys.stderr)
         return 1
-    now = datetime.now(JST).strftime("%Y-%m-%d %H:%M:%S JST")
     n = len(cfg.slack.webhook_url_files)
     print(f"Sending test Slack message via {n} webhook(s) ...")
-    detection = _build_test_detection(cfg, now)
     try:
-        ok = SlackChannel(cfg.slack).send(socket.gethostname(), [detection])
-        if not ok:
-            print("FAILED: Slack send failed", file=sys.stderr)
-            return 1
+        results = send_test_notification(cfg, socket.gethostname())
     except Exception as e:
         log.error("Test Slack failed: %s", e)
         print(f"FAILED: {e}", file=sys.stderr)
+        return 1
+    if not results.get("SlackChannel", False):
+        print("FAILED: Slack send failed", file=sys.stderr)
         return 1
     print("Test Slack message sent successfully")
     return 0

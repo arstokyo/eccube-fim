@@ -6,15 +6,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+from fim.config import DEFAULT_CONFIG_DIR as _DEFAULT_CONFIG_DIR, VERSION_CHECK_STAMP
+
 __version__ = "dev"
 REPO_SLUG         = "arstokyo/eccube-fim"
 VERSION_CHECK_URL = f"https://api.github.com/repos/{REPO_SLUG}/releases/latest"
-# /run is tmpfs on systemd; stamp disappears after reboot — forces a fresh check after restart
-VERSION_CHECK_STAMP = "/run/eccube-fim/version_check"
 
 _CHECK_INTERVAL_HOURS = 24
 _FETCH_TIMEOUT        = 5
-_DEFAULT_CONFIG_DIR   = "/etc/eccube-fim"
 
 
 def read_installed_version(config_dir: str = _DEFAULT_CONFIG_DIR) -> str:

@@ -49,3 +49,55 @@ def test_db_invalid_path():
 def test_db_close(tmp_path):
     d = Db(str(tmp_path / "state.db"))
     d.close()
+
+
+def test_list_records_empty(tmp_path):
+    db = Db(str(tmp_path / "state.db"))
+    assert db.list_records() == []
+    db.close()
+
+
+def test_list_records_returns_rows(tmp_path):
+    db = Db(str(tmp_path / "state.db"))
+    db.record("a/file.twig", "sha1")
+    rows = db.list_records()
+    assert len(rows) == 1
+    assert rows[0][0] == "a/file.twig"
+    db.close()
+
+
+def test_clear_records_all(tmp_path):
+    db = Db(str(tmp_path / "state.db"))
+    db.record("a.twig", "sha1")
+    db.record("b.twig", "sha2")
+    n = db.clear_records()
+    assert n == 2
+    assert db.list_records() == []
+    db.close()
+
+
+def test_clear_records_one_file(tmp_path):
+    db = Db(str(tmp_path / "state.db"))
+    db.record("a.twig", "sha1")
+    db.record("b.twig", "sha2")
+    n = db.clear_records("a.twig")
+    assert n == 1
+    assert len(db.list_records()) == 1
+    db.close()
+
+
+def test_record_count(tmp_path):
+    db = Db(str(tmp_path / "state.db"))
+    assert db.record_count() == 0
+    db.record("a.twig", "sha1")
+    assert db.record_count() == 1
+    db.close()
+
+
+def test_context_manager(tmp_path):
+    with Db(str(tmp_path / "state.db")) as db:
+        db.record("a.twig", "sha1")
+        assert db.record_count() == 1
+    # connection closed after with block — mutating operations must raise
+    with pytest.raises(Exception):
+        db.record("b.twig", "sha2")

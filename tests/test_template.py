@@ -1,16 +1,17 @@
+from fim.detection import Detection
 from fim.template import render_email_body, render_slack_body, render_subject
 
 
 def _detection(path="index.twig", full_path="/shop/index.twig", diff="+tampered line"):
-    return {
-        "path": path,
-        "full_path": full_path,
-        "root_path": "/shop",
-        "git_status": " M index.twig",
-        "diff": diff,
-        "mtime": "2026-05-15 12:00:00 JST",
-        "sha256": "abc123",
-    }
+    return Detection(
+        path=path,
+        full_path=full_path,
+        root_path="/shop",
+        git_status=" M index.twig",
+        diff=diff,
+        mtime="2026-05-15 12:00:00 JST",
+        sha256="abc123",
+    )
 
 
 def test_render_email_body_single_file_contains_path_and_diff():

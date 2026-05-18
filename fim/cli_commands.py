@@ -15,21 +15,21 @@ def cmd_check(args: argparse.Namespace, cfg: Config) -> int:
 
 
 def cmd_validate(args: argparse.Namespace, cfg: Config) -> int:
-    from fim.diagnostics import validate_config
+    from fim.validate import validate_config
     from fim.version import warn_if_update
     warn_if_update()
     return 0 if validate_config(cfg) else 1
 
 
 def cmd_test_mail(args: argparse.Namespace, cfg: Config) -> int:
-    from fim.diagnostics import send_test_mail
+    from fim.validate import send_test_mail
     from fim.version import warn_if_update
     warn_if_update()
     return send_test_mail(cfg)
 
 
 def cmd_test_slack(args: argparse.Namespace, cfg: Config) -> int:
-    from fim.diagnostics import send_test_slack
+    from fim.validate import send_test_slack
     from fim.version import warn_if_update
     warn_if_update()
     return send_test_slack(cfg)

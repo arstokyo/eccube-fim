@@ -8,15 +8,6 @@ from fim.template_ops import (
 )
 
 
-@pytest.fixture(autouse=True)
-def reset_override_dir():
-    """Reset template.py global state between tests to prevent order-dependent failures."""
-    from fim import template
-    template._override_dir = None
-    yield
-    template._override_dir = None
-
-
 @pytest.fixture
 def config_dir(tmp_path):
     return str(tmp_path)
@@ -152,8 +143,6 @@ def test_edit_prints_no_changes_when_file_unchanged(config_dir, capsys):
 
 
 def test_preview_renders_all_sections(config_dir, capsys):
-    from fim.template import set_override_dir
-    set_override_dir(config_dir)
     rc = preview_template(config_dir)
     out = capsys.readouterr().out
     assert rc == 0

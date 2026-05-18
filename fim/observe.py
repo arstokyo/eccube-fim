@@ -1,20 +1,56 @@
+# known: ~220 lines — observe subsystem; no natural split boundary
 import os
-import sqlite3
 import subprocess
+import sys
 from datetime import datetime
 from typing import Optional
 
 from fim.config import Config, INSTALL_TIMER_NAME
+from fim.db import Db
 from fim.utils import JST, LOG_DIR
-from fim._observe_fmt import parse_usec, fmt_rel, fmt_age, log_ts
-# Re-export: keep fim.observe as the single import surface for the CLI.
-from fim.observe_db import db_list, db_clear  # noqa: F401
-from fim.observe_log import log_tail           # noqa: F401
 
 _LOG_PATH = LOG_DIR / "check.log"
 _STALE_SECS = 600     # heartbeat older than 10 min → STALE
 _WINDOW_SECS = 86400  # look-back window for "last error"
 
+
+# ── Format helpers ────────────────────────────────────────────────────────────
+
+def parse_usec(raw: str) -> Optional[datetime]:
+    try:
+        usec = int(raw)
+        return datetime.fromtimestamp(usec / 1_000_000, tz=JST) if usec else None
+    except (ValueError, OverflowError, OSError):
+        return None
+
+
+def fmt_rel(secs: int) -> str:
+    if secs < 0:
+        return "overdue"
+    if secs < 60:
+        return f"in {secs}s"
+    m = secs // 60
+    return f"in {m}m {secs % 60}s" if secs % 60 else f"in {m}m"
+
+
+def fmt_age(secs: int) -> str:
+    if secs < 60:
+        return f"{secs}s ago"
+    m = secs // 60
+    return f"{m}m ago" if m < 60 else f"{m // 60}h ago"
+
+
+def log_ts(line: str) -> Optional[float]:
+    """Parse 'YYYY-MM-DD HH:MM:SS' prefix → Unix timestamp, or None."""
+    if len(line) < 19:
+        return None
+    try:
+        return datetime.strptime(line[:19], "%Y-%m-%d %H:%M:%S").replace(tzinfo=JST).timestamp()
+    except ValueError:
+        return None
+
+
+# ── Status dashboard ──────────────────────────────────────────────────────────
 
 def status(cfg: Config) -> int:
     """Print the operational status dashboard. Return 0."""
@@ -68,18 +104,13 @@ def _print_heartbeat(cfg: Config, now: datetime) -> None:
 
 
 def _print_db(cfg: Config) -> None:
-    conn = None
     try:
-        conn = sqlite3.connect(cfg.state_db)
-        row = conn.execute("SELECT COUNT(*) FROM notifications").fetchone()
-        n = row[0] if row else 0
+        with Db(cfg.state_db) as db:
+            n = db.record_count()
         print(f"\nDB records : {n} suppressed {'file' if n == 1 else 'files'}")
-    except sqlite3.Error:
+    except Exception:
         # intentionally not displayed — status board always shows something
         print("\nDB records : (unavailable)")
-    finally:
-        if conn:
-            conn.close()
 
 
 def _print_log(now: datetime) -> None:
@@ -119,3 +150,72 @@ def _last_error(now: datetime) -> str:
     except OSError:
         return "(cannot read log)"
     return last or "(none in last 24h)"
+
+
+# ── DB operations ─────────────────────────────────────────────────────────────
+
+def db_list(cfg: Config) -> int:
+    """Print all notification deduplication records. Return 0."""
+    try:
+        with Db(cfg.state_db) as db:
+            rows = db.list_records()
+    except Exception as e:
+        print(f"Cannot read state DB: {e}", file=sys.stderr)
+        return 1
+    if not rows:
+        print("No suppressed files in state DB.")
+        return 0
+    print(f"  {'FILE':<54} {'SHA256':<14}  LAST NOTIFIED")
+    print("  " + "-" * 84)
+    for path, sha, ts in rows:
+        dt = datetime.fromtimestamp(ts, tz=JST).strftime("%Y-%m-%d %H:%M:%S JST")
+        print(f"  {path:<54} {sha[:12]:<14}  {dt}")
+    print(f"\n{len(rows)} record(s)")
+    return 0
+
+
+def db_clear(cfg: Config, file_path: Optional[str], yes: bool) -> int:
+    """Remove all dedup records, or only those for file_path. Return 0."""
+    target = f"'{file_path}'" if file_path else "ALL records"
+    if not yes:
+        answer = input(f"Clear {target} from state DB? [y/N] ").strip().lower()
+        if answer != "y":
+            print("Aborted.")
+            return 0
+    try:
+        with Db(cfg.state_db) as db:
+            n = db.clear_records(file_path)
+    except Exception as e:
+        print(f"Cannot clear state DB: {e}", file=sys.stderr)
+        return 1
+    noun = "record" if n == 1 else "records"
+    print(f"Removed {n} {noun} from state DB.")
+    return 0
+
+
+# ── Log operations ────────────────────────────────────────────────────────────
+
+def log_tail(lines: int, level: Optional[str]) -> int:
+    """Print the last `lines` entries from check.log, optionally filtered by level.
+
+    Return 0 on success, 1 if the log file is absent or unreadable.
+    """
+    try:
+        with open(_LOG_PATH, encoding="utf-8", errors="replace") as f:
+            all_lines = f.readlines()
+    except FileNotFoundError:
+        print(f"Log file not found: {_LOG_PATH}", file=sys.stderr)
+        return 1
+    except OSError as e:
+        print(f"Cannot read log: {e}", file=sys.stderr)
+        return 1
+    if level:
+        tag = f" {level.upper()} "
+        all_lines = [ln for ln in all_lines if tag in ln]
+    tail = all_lines[-lines:]
+    for ln in tail:
+        print(ln, end="")
+    if not tail:
+        label = f"{level.upper()} " if level else ""
+        print(f"(no {label}log entries)")
+    return 0
