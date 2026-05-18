@@ -8,13 +8,11 @@ from fim.exceptions import FimConfigError
 from fim.lifecycle import _require_root
 from fim.log import setup_logging
 from fim.cli_commands import (
-    cmd_check, cmd_validate, cmd_approve,
+    cmd_check, cmd_approve,
     cmd_upgrade, cmd_uninstall, cmd_migrate,
 )
-from fim.cli_parsers import (
-    add_status_parser, add_db_parser, add_log_parser,
-    add_config_parser, add_target_parser, add_template_parser,
-)
+from fim.cli_parsers import add_status_parser, add_db_parser, add_log_parser
+from fim.cli_parsers_config import add_config_parser
 from fim.cli_parsers_diag import add_test_parser
 
 
@@ -23,12 +21,6 @@ def _add_check_parser(sub: argparse._SubParsersAction) -> None:
     sp.add_argument("--dry-run", action="store_true",
                     help="detect without writing DB or sending notifications")
     sp.set_defaults(func=cmd_check, needs_config=True, needs_root=True)
-
-
-def _add_validate_parser(sub: argparse._SubParsersAction) -> None:
-    sub.add_parser("validate",
-                   help="validate configuration files and print status report"
-                   ).set_defaults(func=cmd_validate, needs_config=True, needs_root=True)
 
 
 def _add_approve_parser(sub: argparse._SubParsersAction) -> None:
@@ -82,7 +74,6 @@ def _build_parser() -> argparse.ArgumentParser:
                    help="Structured diagnostic output on stdout + DEBUG log level")
     sub = p.add_subparsers(dest="command", metavar="COMMAND")
     _add_check_parser(sub)
-    _add_validate_parser(sub)
     _add_approve_parser(sub)
     _add_upgrade_parser(sub)
     _add_uninstall_parser(sub)
@@ -92,8 +83,6 @@ def _build_parser() -> argparse.ArgumentParser:
     add_log_parser(sub)
     add_test_parser(sub)
     add_config_parser(sub)
-    add_target_parser(sub)
-    add_template_parser(sub)
     return p
 
 
