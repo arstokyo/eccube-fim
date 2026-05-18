@@ -3,7 +3,7 @@
 ■ 検知日時
 $detected_at
 
-■ サーバ
+■ サーバー
 $hostname
 
 ■ 検知ファイル数

@@ -1,4 +1,4 @@
-# known: 158 lines — flat command registry; no natural split boundary
+# known: 163 lines — flat command registry; no natural split boundary
 import argparse
 import sys
 from typing import Optional
@@ -96,6 +96,11 @@ def cmd_config_timer(args: argparse.Namespace, cfg: Optional[Config]) -> int:
         return 1
     print(f"Timer interval set to {format_interval(minutes)} — timer restarted.")
     return 0
+
+
+def cmd_config_setup_notify(args: argparse.Namespace, cfg: Optional[Config]) -> int:
+    from fim.notify_setup import setup_notify_interactive
+    return setup_notify_interactive(args.config_dir)
 
 
 def cmd_target_list(args: argparse.Namespace, cfg: Optional[Config]) -> int:

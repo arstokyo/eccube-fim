@@ -3,7 +3,7 @@ from typing import Optional
 
 from fim.config import Config
 from fim.cli_commands import (
-    cmd_config_show, cmd_config_edit, cmd_config_timer,
+    cmd_config_show, cmd_config_edit, cmd_config_timer, cmd_config_setup_notify,
     cmd_validate,
     cmd_target_list, cmd_target_add, cmd_target_remove,
     cmd_template_list, cmd_template_show, cmd_template_edit,
@@ -11,7 +11,7 @@ from fim.cli_commands import (
 )
 
 
-def add_config_parser(sub: argparse._SubParsersAction) -> None:  # known: 44 lines — declarative parser registration, no logic boundary
+def add_config_parser(sub: argparse._SubParsersAction) -> None:  # known: 48 lines — declarative parser registration, no logic boundary
     cp = sub.add_parser("config", help="view or edit configuration files")
     csub = cp.add_subparsers(dest="config_cmd", metavar="ACTION")
 
@@ -47,6 +47,11 @@ def add_config_parser(sub: argparse._SubParsersAction) -> None:  # known: 44 lin
         help="new interval: number = minutes (1–60) or '1h' (e.g. 5, 30, 1h)",
     )
     timer_sp.set_defaults(func=cmd_config_timer, needs_config=False, needs_root=True)
+
+    csub.add_parser(
+        "setup-notify",
+        help="interactive wizard to enable or reconfigure email/Slack notifications",
+    ).set_defaults(func=cmd_config_setup_notify, needs_config=False, needs_root=True)
 
     csub.add_parser(
         "validate",
