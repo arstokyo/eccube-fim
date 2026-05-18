@@ -12,6 +12,7 @@ venv/
 # IDE
 .idea/
 .vscode/
+plugins/
 *.swp
 
 # Runtime state (never commit)

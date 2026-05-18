@@ -103,7 +103,7 @@ def _load_raw_notify(notify_path: str) -> dict[str, object]:
 
 
 def _print_notify_status(data: dict[str, object]) -> None:
-    email_on = data.get("email", {}).get("enabled", False)
+    email_on = data.get("email", {}).get("enabled", True)
     slack_on = data.get("slack", {}).get("enabled", False)
     print("\nCurrent status:")
     print(f"  email : {'enabled' if email_on else 'disabled'}")
