@@ -84,9 +84,29 @@ def _query_timer() -> tuple[str, Optional[datetime]]:
              "--property=NextElapseUSecRealtime", "--value"],
             capture_output=True, text=True,
         )
-        return state, parse_usec(r2.stdout.strip())
+        next_dt = parse_usec(r2.stdout.strip()) or _query_timer_from_list()
+        return state, next_dt
     except OSError:
         return "(systemd not available)", None
+
+
+def _query_timer_from_list() -> Optional[datetime]:
+    # NextElapseUSecRealtime returns 0 briefly after the timer fires on OL9;
+    # list-timers for a specific unit is always populated.
+    try:
+        r = subprocess.run(
+            ["systemctl", "list-timers", INSTALL_TIMER_NAME,
+             "--no-legend", "--no-pager"],
+            capture_output=True, text=True,
+        )
+        line = r.stdout.strip()
+        if not line:
+            return None
+        parts = line.split()
+        # output: DayOfWeek YYYY-MM-DD HH:MM:SS TZ LEFT ...
+        return datetime.strptime(f"{parts[1]} {parts[2]}", "%Y-%m-%d %H:%M:%S").replace(tzinfo=JST)
+    except (OSError, ValueError, IndexError):
+        return None
 
 
 def _print_heartbeat(cfg: Config, now: datetime) -> None:
