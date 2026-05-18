@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from fim.config import DEFAULT_CONFIG_DIR as _DEFAULT_CONFIG_DIR, VERSION_CHECK_STAMP
+from fim.config import DEFAULT_CONFIG_DIR as _DEFAULT_CONFIG_DIR
 
 __version__ = "dev"
 REPO_SLUG         = "arstokyo/eccube-fim"

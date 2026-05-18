@@ -8,7 +8,8 @@ from fim.config import Config
 
 def cmd_check(args: argparse.Namespace, cfg: Config) -> int:
     from fim.check import run
-    from fim.version import warn_if_update, VERSION_CHECK_STAMP
+    from fim.config import VERSION_CHECK_STAMP
+    from fim.version import warn_if_update
     # rate-limited to once per 24h — check is on a 5-min systemd loop
     warn_if_update(VERSION_CHECK_STAMP)
     return run(cfg, dry_run=args.dry_run, verbose=args.verbose)
