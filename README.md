@@ -15,7 +15,7 @@ curl -fsSL https://raw.githubusercontent.com/arstokyo/eccube-fim/main/install.sh
 
 The installer will ask for:
 - EC-CUBE root path (default `/var/www/html`)
-- Check interval in minutes (default `5`)
+- Check interval in minutes (default `15`)
 - SMTP host, port, user, and password
 - Alert recipients (comma-separated email addresses)
 - Slack webhook URLs (optional)

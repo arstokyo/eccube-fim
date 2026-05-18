@@ -253,7 +253,7 @@ prompt_infra() {
     echo
     info "=== Infrastructure ==="
     prompt ECCUBE_ROOT    "EC-CUBE root path"        "/var/www/html"
-    prompt CHECK_INTERVAL "Check interval (minutes)" "5"
+    prompt CHECK_INTERVAL "Check interval (minutes)" "15"
     [ -d "$ECCUBE_ROOT" ] || warn "$ECCUBE_ROOT not found — create it before starting the service"
     echo "$CHECK_INTERVAL" | grep -qE '^[1-9][0-9]*$' \
         || { error "Interval must be a positive integer"; exit 1; }
@@ -384,7 +384,7 @@ _read_interval_from_timer() {
     local calendar
     calendar=$(systemctl cat eccube-fim-check.timer 2>/dev/null | awk -F= '/^OnCalendar=/{print $2}')
     CHECK_INTERVAL="${calendar##*:0/}"
-    CHECK_INTERVAL="${CHECK_INTERVAL:-5}"
+    CHECK_INTERVAL="${CHECK_INTERVAL:-15}"
 }
 
 wizard() {
