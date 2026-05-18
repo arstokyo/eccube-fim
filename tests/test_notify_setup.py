@@ -1,6 +1,7 @@
 import os
 import pytest
 import yaml
+from typing import Iterator
 from unittest.mock import patch
 
 from fim.notify_setup import (
@@ -9,6 +10,8 @@ from fim.notify_setup import (
     _print_notify_status,
     _ask_yes_no,
     _prompt,
+    _validate_email,
+    _collect_email,
     setup_notify_interactive,
 )
 
@@ -90,3 +93,78 @@ def test_setup_notify_no_changes_writes_yaml(tmp_path, monkeypatch):
     data = yaml.safe_load((tmp_path / "notify.yaml").read_text())
     assert data["email"]["enabled"] is True
     assert data["slack"]["enabled"] is False
+
+
+# ---------------------------------------------------------------------------
+# _validate_email
+# ---------------------------------------------------------------------------
+
+def test_validate_email_accepts_simple_address():
+    _validate_email("user@example.com")
+
+
+def test_validate_email_accepts_subdomain():
+    _validate_email("fim@mail.example.co.jp")
+
+
+def test_validate_email_accepts_plus_tag():
+    _validate_email("fim+alerts@example.com")
+
+
+def test_validate_email_rejects_no_at():
+    with pytest.raises(ValueError, match="Invalid email address"):
+        _validate_email("notanemail")
+
+
+def test_validate_email_rejects_leading_at():
+    with pytest.raises(ValueError, match="Invalid email address"):
+        _validate_email("@example.com")
+
+
+def test_validate_email_rejects_trailing_at():
+    with pytest.raises(ValueError, match="Invalid email address"):
+        _validate_email("user@")
+
+
+def test_validate_email_rejects_double_at():
+    with pytest.raises(ValueError, match="Invalid email address"):
+        _validate_email("user@@example.com")
+
+
+# ---------------------------------------------------------------------------
+# _collect_email — integration
+# ---------------------------------------------------------------------------
+
+def _make_collect_inputs(
+    host: str = "smtp.example.com",
+    port: str = "587",
+    user: str = "fim@example.com",
+    from_addr: str = "",
+    recipients: str = "ops@example.com",
+) -> Iterator[str]:
+    # password prompt uses getpass.getpass(), not input() — excluded from iterator
+    return iter([host, port, user, from_addr or user, recipients])
+
+
+def test_collect_email_rejects_invalid_from(tmp_path, monkeypatch):
+    responses = _make_collect_inputs(from_addr="notvalid")
+    monkeypatch.setattr("builtins.input", lambda _: next(responses))
+    monkeypatch.setattr("getpass.getpass", lambda _: "secret")
+    with pytest.raises(ValueError, match="Invalid email address"):
+        _collect_email(str(tmp_path))
+
+
+def test_collect_email_rejects_invalid_recipient(tmp_path, monkeypatch):
+    responses = _make_collect_inputs(recipients="good@example.com, badaddr")
+    monkeypatch.setattr("builtins.input", lambda _: next(responses))
+    monkeypatch.setattr("getpass.getpass", lambda _: "secret")
+    with pytest.raises(ValueError, match="Invalid email address"):
+        _collect_email(str(tmp_path))
+
+
+def test_collect_email_accepts_multiple_valid_recipients(tmp_path, monkeypatch):
+    responses = _make_collect_inputs(recipients="a@x.com, b@y.com")
+    monkeypatch.setattr("builtins.input", lambda _: next(responses))
+    monkeypatch.setattr("getpass.getpass", lambda _: "secret")
+    result = _collect_email(str(tmp_path))
+    assert result["recipients"] == ["a@x.com", "b@y.com"]

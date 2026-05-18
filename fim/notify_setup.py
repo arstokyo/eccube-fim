@@ -1,3 +1,4 @@
+# known: 156 lines — _validate_email + _validate_email_inputs must stay co-located with _collect_email
 import getpass
 import os
 import sys
@@ -46,6 +47,25 @@ def _secure_write(path: str, content: str) -> None:
         pass  # not running as root in tests; mode 0600 is already applied
 
 
+def _validate_email(addr: str) -> None:
+    # full RFC 5321 parsing would reject valid addresses; structural check suffices
+    parts = addr.split("@")
+    if len(parts) != 2 or not parts[0] or not parts[1]:
+        raise ValueError(f"Invalid email address: {addr!r}")
+
+
+def _validate_email_inputs(smtp_host: str, smtp_port: str, from_addr: str, recipients: list[str]) -> None:
+    if not smtp_host:
+        raise ValueError("SMTP host is required")
+    if not smtp_port.isdigit():
+        raise ValueError("SMTP port must be a number")
+    _validate_email(from_addr)
+    if not recipients:
+        raise ValueError("At least one recipient is required")
+    for r in recipients:
+        _validate_email(r)
+
+
 def _collect_email(config_dir: str) -> dict[str, object]:
     print("\n=== Email credentials ===")
     smtp_host = _prompt("SMTP host")
@@ -54,19 +74,11 @@ def _collect_email(config_dir: str) -> dict[str, object]:
     smtp_password = _prompt("SMTP password", secret=True)
     from_addr = _prompt("From address", smtp_user)
     rcpt_raw = _prompt("Recipients (comma-separated)")
-
-    if not smtp_host:
-        raise ValueError("SMTP host is required")
-    if not smtp_port.isdigit():
-        raise ValueError("SMTP port must be a number")
     recipients = [r.strip() for r in rcpt_raw.split(",") if r.strip()]
-    if not recipients:
-        raise ValueError("At least one recipient is required")
-
+    _validate_email_inputs(smtp_host, smtp_port, from_addr, recipients)
     password_file = os.path.join(config_dir, "smtp.password")
     _secure_write(password_file, smtp_password)
     print(f"Written {password_file} (chmod 600)")
-
     return {
         "enabled": True,
         "smtp_host": smtp_host,

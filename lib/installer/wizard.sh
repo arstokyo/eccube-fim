@@ -29,6 +29,11 @@ prompt() {
     printf -v "$var" '%s' "${input:-$default}"
 }
 
+validate_email() {
+    # full RFC 5321 parsing would reject valid addresses; structural check suffices
+    [[ "$1" =~ ^[^@]+@[^@]+$ ]] || { error "Invalid email address: $1"; exit 1; }
+}
+
 prompt_infra() {
     echo
     info "=== Infrastructure ==="
@@ -60,6 +65,12 @@ prompt_email() {
     prompt EMAIL_FROM     "From address"                 "$SMTP_USER"
     prompt EMAIL_RCPT_RAW "Recipients (comma-separated)" ""
     [ -n "$EMAIL_RCPT_RAW" ] || { error "At least one recipient is required"; exit 1; }
+    validate_email "$EMAIL_FROM"
+    IFS=',' read -ra _rcpts <<< "$EMAIL_RCPT_RAW"
+    for _r in "${_rcpts[@]}"; do
+        _r="${_r// /}"
+        [ -n "$_r" ] && validate_email "$_r"
+    done
 }
 
 prompt_slack() {
