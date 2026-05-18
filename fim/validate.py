@@ -59,7 +59,7 @@ def send_test_mail(cfg: Config) -> int:
     print(f"Sending test email to {cfg.email.recipients} "
           f"via {cfg.email.smtp_host}:{cfg.email.smtp_port} ...")
     try:
-        results = send_test_notification(cfg, socket.gethostname())
+        results = send_test_notification(cfg, socket.gethostname(), channel_name="email")
     except Exception as e:
         log.error("Test email failed: %s", e)
         print(f"FAILED: {e}", file=sys.stderr)
@@ -79,7 +79,7 @@ def send_test_slack(cfg: Config) -> int:
     n = len(cfg.slack.webhook_url_files)
     print(f"Sending test Slack message via {n} webhook(s) ...")
     try:
-        results = send_test_notification(cfg, socket.gethostname())
+        results = send_test_notification(cfg, socket.gethostname(), channel_name="slack")
     except Exception as e:
         log.error("Test Slack failed: %s", e)
         print(f"FAILED: {e}", file=sys.stderr)

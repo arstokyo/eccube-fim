@@ -1,7 +1,7 @@
 import logging
 import socket
 from datetime import datetime
-from typing import Callable, Optional
+from typing import Callable, Optional, Type
 
 from fim.config import Config
 from fim.detection import Detection
@@ -19,6 +19,13 @@ _CHANNEL_BUILDERS: list[tuple[Callable[[Config], bool], Callable[[Config], Chann
     (lambda cfg: cfg.email.enabled, lambda cfg: EmailChannel(cfg.email)),
     (lambda cfg: cfg.slack.enabled, lambda cfg: SlackChannel(cfg.slack)),
 ]
+
+# name→class map used by send_test_notification to filter to a single channel.
+# Keys must match the channel_name strings accepted by the CLI.
+_CHANNEL_CLASSES: dict[str, Type[Channel]] = {
+    "email": EmailChannel,
+    "slack": SlackChannel,
+}
 
 
 def build_channels(cfg: Config) -> list[Channel]:
@@ -58,11 +65,13 @@ def _send_safe(channel: Channel, notification: RenderedNotification) -> bool:
         return False
 
 
-def send_test_notification(cfg: Config, hostname: str) -> dict[str, bool]:
-    """Send test notifications on all enabled channels.
+def send_test_notification(
+    cfg: Config, hostname: str, channel_name: Optional[str] = None
+) -> dict[str, bool]:
+    """Send a test notification on the named channel, or all enabled if not given.
 
     Return dict mapping channel class name → send result,
-    e.g. {"EmailChannel": True, "SlackChannel": False}.
+    e.g. {"EmailChannel": True}.
     """
     now = datetime.now(JST).strftime("%Y-%m-%d %H:%M:%S JST")
     test_detection = Detection(
@@ -71,6 +80,9 @@ def send_test_notification(cfg: Config, hostname: str) -> dict[str, bool]:
         mtime=now, sha256="",
     )
     channels = build_channels(cfg)
+    if channel_name is not None:
+        target = _CHANNEL_CLASSES[channel_name]
+        channels = [ch for ch in channels if isinstance(ch, target)]
     notification = _render(hostname, [test_detection], cfg.config_dir)
     return {
         ch.__class__.__name__: _send_safe(ch, notification)

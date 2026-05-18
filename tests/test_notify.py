@@ -1,6 +1,6 @@
 import pytest
 from fim.config import Config, NotifyEmail, NotifySlack
-from fim.notify import dispatch_notifications, build_channels
+from fim.notify import dispatch_notifications, build_channels, send_test_notification
 from fim.notify.base import RenderedNotification
 from fim.notify.email import EmailChannel
 from fim.notify.slack import SlackChannel
@@ -137,3 +137,63 @@ def test_build_channels_none_returns_empty(make_config):
     """build_channels returns [] when all channels disabled; load_config guards enabled check."""
     cfg = make_config(email_enabled=False, slack_enabled=False)
     assert build_channels(cfg) == []
+
+
+_FAKE_NOTIFICATION = RenderedNotification(subject="[TEST]", bodies={"email": "", "slack": ""})
+
+
+def test_send_test_notification_email_only_skips_slack(make_config, monkeypatch):
+    """channel_name='email' must not invoke SlackChannel even if enabled."""
+    cfg = make_config(email_enabled=True, slack_enabled=True)
+    slack_calls = []
+
+    monkeypatch.setattr("fim.notify._render", lambda *a, **kw: _FAKE_NOTIFICATION)
+    monkeypatch.setattr("fim.notify.email._send_smtp", lambda *a, **kw: None)
+
+    def fake_slack_send(self, notification):
+        slack_calls.append(notification)
+        return True
+
+    monkeypatch.setattr("fim.notify.slack.SlackChannel.send", fake_slack_send)
+
+    results = send_test_notification(cfg, "host-a", channel_name="email")
+
+    assert "EmailChannel" in results
+    assert "SlackChannel" not in results
+    assert slack_calls == []
+
+
+def test_send_test_notification_slack_only_skips_email(make_config, monkeypatch):
+    """channel_name='slack' must not invoke EmailChannel even if enabled."""
+    cfg = make_config(email_enabled=True, slack_enabled=True)
+    cfg.slack.webhook_url_files = ["/tmp/fake"]
+    email_calls = []
+
+    monkeypatch.setattr("fim.notify._render", lambda *a, **kw: _FAKE_NOTIFICATION)
+
+    def fake_smtp(email_cfg, subject, body):
+        email_calls.append(subject)
+
+    monkeypatch.setattr("fim.notify.email._send_smtp", fake_smtp)
+    monkeypatch.setattr("fim.notify.slack.SlackChannel.send", lambda self, n: True)
+
+    results = send_test_notification(cfg, "host-a", channel_name="slack")
+
+    assert "SlackChannel" in results
+    assert "EmailChannel" not in results
+    assert email_calls == []
+
+
+def test_send_test_notification_no_filter_sends_all(make_config, monkeypatch):
+    """With no channel_name, all enabled channels are exercised (existing behaviour)."""
+    cfg = make_config(email_enabled=True, slack_enabled=True)
+    cfg.slack.webhook_url_files = ["/tmp/fake"]
+
+    monkeypatch.setattr("fim.notify._render", lambda *a, **kw: _FAKE_NOTIFICATION)
+    monkeypatch.setattr("fim.notify.email._send_smtp", lambda *a, **kw: None)
+    monkeypatch.setattr("fim.notify.slack.SlackChannel.send", lambda self, n: True)
+
+    results = send_test_notification(cfg, "host-a")
+
+    assert "EmailChannel" in results
+    assert "SlackChannel" in results
