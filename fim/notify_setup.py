@@ -46,7 +46,7 @@ def _secure_write(path: str, content: str) -> None:
         pass  # not running as root in tests; mode 0600 is already applied
 
 
-def _collect_email(config_dir: str) -> dict:
+def _collect_email(config_dir: str) -> dict[str, object]:
     print("\n=== Email credentials ===")
     smtp_host = _prompt("SMTP host")
     smtp_port = _prompt("SMTP port", "587")
@@ -78,7 +78,7 @@ def _collect_email(config_dir: str) -> dict:
     }
 
 
-def _collect_slack(config_dir: str) -> dict:
+def _collect_slack(config_dir: str) -> dict[str, object]:
     print("\n=== Slack webhooks ===")
     webhook_files = []
     i = 1
@@ -94,7 +94,7 @@ def _collect_slack(config_dir: str) -> dict:
     return {"enabled": bool(webhook_files), "webhook_url_files": webhook_files}
 
 
-def _load_raw_notify(notify_path: str) -> dict:
+def _load_raw_notify(notify_path: str) -> dict[str, object]:
     if not os.path.exists(notify_path):
         return {"email": {"enabled": False}, "slack": {"enabled": False}}
     with open(notify_path, encoding="utf-8") as f:
@@ -102,7 +102,7 @@ def _load_raw_notify(notify_path: str) -> dict:
     return data if isinstance(data, dict) else {}
 
 
-def _print_notify_status(data: dict) -> None:
+def _print_notify_status(data: dict[str, object]) -> None:
     email_on = data.get("email", {}).get("enabled", False)
     slack_on = data.get("slack", {}).get("enabled", False)
     print("\nCurrent status:")
@@ -110,7 +110,7 @@ def _print_notify_status(data: dict) -> None:
     print(f"  slack : {'enabled' if slack_on else 'disabled'}")
 
 
-def _apply_and_validate(config_dir: str, data: dict, notify_path: str) -> int:
+def _apply_and_validate(config_dir: str, data: dict[str, object], notify_path: str) -> int:
     _secure_write(notify_path, yaml.dump(data, allow_unicode=True, default_flow_style=False))
     print(f"\nWritten {notify_path}")
     try:
@@ -119,8 +119,7 @@ def _apply_and_validate(config_dir: str, data: dict, notify_path: str) -> int:
         print(f"Config error — fix before next check:\n  {e}", file=sys.stderr)
         return 1
     print()
-    validate_config(cfg)
-    return 0
+    return 0 if validate_config(cfg) else 1
 
 
 def setup_notify_interactive(config_dir: str) -> int:

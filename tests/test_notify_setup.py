@@ -1,6 +1,7 @@
 import os
 import pytest
 import yaml
+from unittest.mock import patch
 
 from fim.notify_setup import (
     _secure_write,
@@ -83,7 +84,8 @@ def test_setup_notify_no_changes_writes_yaml(tmp_path, monkeypatch):
     monkeypatch.setattr("sys.stdin.isatty", lambda: True)
     responses = iter(["n", "n"])
     monkeypatch.setattr("builtins.input", lambda _: next(responses))
-    result = setup_notify_interactive(str(tmp_path))
+    with patch("fim.notify_setup.validate_config", return_value=True):
+        result = setup_notify_interactive(str(tmp_path))
     assert result == 0
     data = yaml.safe_load((tmp_path / "notify.yaml").read_text())
     assert data["email"]["enabled"] is True
