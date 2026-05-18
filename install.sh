@@ -558,7 +558,8 @@ install_systemd_files() {
 }
 
 activate_systemd_units() {
-    systemctl enable --now eccube-fim-check.timer
+    systemctl enable eccube-fim-check.timer
+    systemctl restart eccube-fim-check.timer
 }
 
 # ---------------------------------------------------------------------------
