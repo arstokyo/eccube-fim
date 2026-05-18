@@ -5,8 +5,8 @@ from fim.utils import LOG_DIR
 
 
 def setup_logging(verbose: bool = False) -> None:
-    """Configure the root 'eccube-fim' logger once at process startup."""
-    logger = logging.getLogger("eccube-fim")
+    """Configure the root 'fim' logger once at process startup."""
+    logger = logging.getLogger("fim")
     # guard against double-init when called more than once in the same process
     if logger.handlers:
         return
