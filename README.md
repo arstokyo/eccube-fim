@@ -22,8 +22,8 @@ The installer will ask for:
 After install, verify everything works:
 
 ```bash
-eccube-fim validate
-eccube-fim test-mail
+eccube-fim config validate
+eccube-fim test mail
 ```
 
 ---

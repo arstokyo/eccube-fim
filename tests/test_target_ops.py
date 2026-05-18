@@ -119,7 +119,7 @@ def test_add_no_warning_when_git_tracked(config_dir, capsys):
 def test_add_warns_when_git_unreachable(config_dir, capsys):
     with patch("fim.target_ops.is_git_tracked", return_value=False):
         add_target(config_dir, "app/template/default/Block/header.twig")
-    assert "eccube-fim validate" in capsys.readouterr().err
+    assert "eccube-fim config validate" in capsys.readouterr().err
 
 
 def test_add_target_succeeds_without_daemon_yaml(tmp_path, capsys):

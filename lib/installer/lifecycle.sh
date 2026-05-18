@@ -34,7 +34,7 @@ post_install_checks() {
     local fim_cmd="$SBIN_DIR/eccube-fim"
 
     if [ "$NONINTERACTIVE" -eq 1 ]; then
-        info "Next: $fim_cmd validate"
+        info "Next: $fim_cmd config validate"
         if [ "${EMAIL_ENABLED:-true}" = "true" ]; then
             info "Next: $fim_cmd test mail"
         fi
@@ -46,15 +46,15 @@ post_install_checks() {
     local run_validate
 
     if [ ! -x "$fim_cmd" ]; then
-        warn "$fim_cmd not found or not executable — run validate/test mail manually after fixing install"
+        warn "$fim_cmd not found or not executable — run config validate/test mail manually after fixing install"
         info "Finished."
         return
     fi
 
-    read -rp "Run '$fim_cmd validate' now? [Y/n]: " run_validate </dev/tty
+    read -rp "Run '$fim_cmd config validate' now? [Y/n]: " run_validate </dev/tty
     if [ "${run_validate,,}" != "n" ]; then
         echo
-        if "$fim_cmd" validate </dev/null; then
+        if "$fim_cmd" config validate </dev/null; then
             if [ "${EMAIL_ENABLED:-true}" = "true" ]; then
                 local run_testmail
                 read -rp "Send test email via '$fim_cmd test mail' now? [Y/n]: " run_testmail </dev/tty

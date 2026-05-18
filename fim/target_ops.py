@@ -100,7 +100,7 @@ def _warn_if_not_git_tracked(root_path: str, file_path: str) -> None:
     if not is_git_tracked(root_path, file_path):
         print(
             f"Warning: '{file_path}' may not be tracked in git — "
-            "run 'eccube-fim validate' to confirm.",
+            "run 'eccube-fim config validate' to confirm.",
             file=sys.stderr,
         )
 
