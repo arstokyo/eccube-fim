@@ -1,6 +1,7 @@
 # eccube-fim
 
-File integrity monitoring for EC-CUBE. Detects twig template tampering via git diff and sends alerts by email (and optionally Slack) within minutes.
+File integrity monitoring for EC-CUBE. Detects twig template tampering via git diff
+and sends alerts by email (and optionally Slack) within minutes.
 
 Runs as a systemd timer on Oracle Linux 9 / RHEL / Ubuntu 24.04.
 
@@ -39,18 +40,66 @@ Supported OS: Oracle Linux 9, RHEL 9, Ubuntu 24.04, openSUSE Leap 15, Arch Linux
 
 ---
 
-## After install
+## CLI reference
 
-| Task | Command |
+All commands require root (`sudo`) except where noted.
+
+### Daily operations
+
+| Command | Description |
 |---|---|
-| Check monitoring status | `systemctl status eccube-fim-check.timer` |
-| View recent alerts | `journalctl -u eccube-fim-check -n 50` |
-| Run a manual check now | `eccube-fim check` |
-| Approve a legitimate change | `eccube-fim approve <file> --message "reason"` |
-| Update to latest version | `sudo eccube-fim upgrade` |
-| Change SMTP or root path | `curl -fsSL https://raw.githubusercontent.com/arstokyo/eccube-fim/main/install.sh \| sudo bash -s -- --reconfigure` |
+| `eccube-fim check` | Run an integrity check immediately (systemd runs this automatically) |
+| `eccube-fim approve <file> -m "reason"` | Mark a detected change as intentional; clears the alert |
+| `eccube-fim status` | Dashboard: service state, last heartbeat, DB record count, last log line |
+| `eccube-fim log` | Tail the check log (last 20 lines); `--lines N` or `--level ERROR` to filter |
 
-Monitored files are listed in `/etc/eccube-fim/targets.yaml`. Edit that file to add or remove files — no reinstall needed.
+### Configuration
+
+| Command | Description |
+|---|---|
+| `eccube-fim config show` | Print the merged effective config from all three YAML files |
+| `eccube-fim config validate` | Validate all config files and print a status report |
+| `eccube-fim config edit [daemon\|targets\|notify]` | Open a config file in `$EDITOR`; validates on save |
+| `eccube-fim config timer [INTERVAL]` | Show or change the check interval (e.g. `5`, `30`, `1h`) |
+| `eccube-fim config setup-notify` | Interactive wizard to enable or reconfigure email/Slack |
+
+### Monitored files
+
+Managed via `config target`; persisted to `/etc/eccube-fim/targets.yaml`.
+
+| Command | Description |
+|---|---|
+| `eccube-fim config target list` | List all monitored file paths |
+| `eccube-fim config target add <path>` | Add a file (path relative to EC-CUBE root) |
+| `eccube-fim config target remove <path>` | Remove a file from monitoring |
+
+### Notification templates
+
+Override built-in email/Slack message templates without editing config YAML.
+
+| Command | Description |
+|---|---|
+| `eccube-fim config template list` | Show all templates and whether a user override is active |
+| `eccube-fim config template show <name>` | Print the active template (`subject`, `email`, or `slack`) |
+| `eccube-fim config template edit <name>` | Open (or create) an override in `$EDITOR` |
+| `eccube-fim config template reset <name>` | Delete override and revert to built-in |
+| `eccube-fim config template preview` | Render all templates with sample data |
+
+### Diagnostics
+
+| Command | Description |
+|---|---|
+| `eccube-fim test mail` | Send a test email via SMTP to verify channel reachability |
+| `eccube-fim test slack` | Send a test Slack message via webhook |
+| `eccube-fim db list` | Show all deduplication state records (suppressed alerts) |
+| `eccube-fim db clear` | Remove dedup records — all, or `--file <path>` for one file |
+
+### Lifecycle
+
+| Command | Description |
+|---|---|
+| `eccube-fim upgrade` | Download and install the latest release |
+| `eccube-fim uninstall` | Stop the service and remove all installed files |
 
 ---
 
