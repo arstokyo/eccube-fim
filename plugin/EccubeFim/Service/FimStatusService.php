@@ -55,12 +55,11 @@ class FimStatusService
             $data['heartbeat']['last_seen_fmt'] = $this->fmtTs((int) $data['heartbeat']['last_seen_at']);
         }
 
-        foreach ($data['recent_detections'] ?? [] as &$det) {
+        foreach ($data['recent_detections'] ?? [] as $i => $det) {
             if (isset($det['detected_at'])) {
-                $det['detected_at_fmt'] = $this->fmtTs((int) $det['detected_at']);
+                $data['recent_detections'][$i]['detected_at_fmt'] = $this->fmtTs((int) $det['detected_at']);
             }
         }
-        unset($det);
 
         return $data;
     }
