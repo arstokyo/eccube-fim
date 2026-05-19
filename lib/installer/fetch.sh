@@ -43,7 +43,7 @@ if actual < min_ver:
 
 fetch_source() {
     local script_dir
-    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || echo "")"
+    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]:-}")" 2>/dev/null && pwd || echo "")"
     if [ -d "${script_dir}/fim" ]; then
         SRC_DIR="$script_dir"
         VERSION="local"

@@ -48,7 +48,7 @@ except Exception:
 # Plugin installer
 # ---------------------------------------------------------------------------
 CONFIG_FILE="/etc/eccube-fim/daemon.yaml"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || echo ".")"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-}")" 2>/dev/null && pwd || echo ".")"
 PLUGIN_SRC=""   # set by fetch_plugin_source()
 
 # ── root guard ────────────────────────────────────────────────────────────────

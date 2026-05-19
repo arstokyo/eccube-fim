@@ -5,9 +5,8 @@ namespace Plugin\EccubeFim\Controller\Admin;
 
 use Plugin\EccubeFim\Service\FimStatusService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
 
 class MonitorController extends AbstractController
 {
@@ -20,11 +19,13 @@ class MonitorController extends AbstractController
 
     /**
      * @Route("/%eccube_admin_route%/fim", name="plugin_eccube_fim_admin_monitor", methods={"GET"})
+     * 
+     * @Template("@EccubeFim/admin/EccubeFim/index.twig")
      */
-    public function index(Request $request): Response
+    public function index()
     {
-        return $this->render('@EccubeFim/admin/EccubeFim/index.twig', [
+        return [
             'status' => $this->fimService->getStatus(),
-        ]);
+        ];
     }
 }
