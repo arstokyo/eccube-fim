@@ -7,10 +7,6 @@ services:
         autoconfigure: true
         public: false
 
-    Plugin\EccubeFim\:
-        resource: '../../*'
-        exclude: '../../{composer.json}'
-
     # explicit argument override — fim.status_file is not type-hintable
     Plugin\EccubeFim\Service\FimStatusService:
         arguments:
