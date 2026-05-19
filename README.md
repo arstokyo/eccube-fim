@@ -40,6 +40,35 @@ Supported OS: Oracle Linux 9, RHEL 9, Ubuntu 24.04, openSUSE Leap 15, Arch Linux
 
 ---
 
+## Plugin (EC-CUBE Admin Dashboard)
+
+The plugin adds a read-only FIM status dashboard to the EC-CUBE admin panel
+(`/admin/fim`). It requires the eccube-fim daemon to be installed first.
+
+**Step 1 — Copy plugin files (run as root):**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/arstokyo/eccube-fim/main/plugin/install-plugin.sh | sudo bash
+```
+
+The script reads `root_path` from `/etc/eccube-fim/daemon.yaml` and copies the
+plugin into `<eccube-root>/app/Plugin/EccubeFim/`.
+
+**Step 2 — Activate via EC-CUBE console:**
+
+```bash
+cd /var/www/html   # your EC-CUBE root
+php bin/console eccube:plugin:install --code=EccubeFim
+php bin/console eccube:plugin:enable  --code=EccubeFim
+php bin/console cache:clear --env=prod --no-warmup
+```
+
+The script prints these exact commands with the correct path after it finishes.
+
+**Dashboard:** `https://<your-site>/admin/fim`
+
+---
+
 ## CLI reference
 
 All commands require root (`sudo`) except where noted.

@@ -7,3 +7,9 @@ if git diff --cached --name-only | grep -qE "^lib/installer/|^build\.sh"; then
     ./build.sh >/dev/null
     git add install.sh
 fi
+
+if git diff --cached --name-only | grep -qE "^lib/plugin/|^lib/installer/header\.sh|^plugin/build\.sh"; then
+    echo "[pre-commit] lib/plugin/ changed — rebuilding plugin/install-plugin.sh"
+    ./plugin/build.sh >/dev/null
+    git add plugin/install-plugin.sh
+fi

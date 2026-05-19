@@ -31,6 +31,11 @@ jobs:
                 "$DIST/"
           tar -czf "${DIST}.tar.gz" "$DIST/"
 
+      - name: Build plugin tarball
+        run: |
+          tar -czf "eccube-fim-plugin-${GITHUB_REF_NAME}.tar.gz" \
+              -C plugin EccubeFim
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -44,4 +49,6 @@ jobs:
 
             ---
             python_requires: ">=3.9"
-          files: eccube-fim-${{ github.ref_name }}.tar.gz
+          files: |
+            eccube-fim-${{ github.ref_name }}.tar.gz
+            eccube-fim-plugin-${{ github.ref_name }}.tar.gz
