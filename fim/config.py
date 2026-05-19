@@ -21,6 +21,8 @@ INSTALL_TIMER_NAME      = "eccube-fim-check.timer"
 INSTALL_SERVICE_NAME    = "eccube-fim-check.service"
 # /run is tmpfs on systemd; stamp disappears after reboot — forces a fresh check after restart
 VERSION_CHECK_STAMP     = "/run/eccube-fim/version_check"
+INSTALL_STATUS_DIR      = "/var/lib/eccube-fim"
+INSTALL_STATUS_FILE     = "/var/lib/eccube-fim/status.json"
 
 
 @dataclass

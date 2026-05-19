@@ -8,6 +8,7 @@ LIB_DIR=/usr/local/lib/eccube-fim
 CONFIG_DIR=/etc/eccube-fim
 LOG_DIR=/var/log/eccube-fim
 RUN_DIR=/run/eccube-fim
+STATUS_DIR=/var/lib/eccube-fim
 
 REPO_SLUG="arstokyo/eccube-fim"
 REPO="https://github.com/${REPO_SLUG}"
@@ -178,6 +179,10 @@ create_directories() {
     mkdir -p "$LIB_DIR"
     chmod 755 "$LIB_DIR"
     chown root:root "$LIB_DIR"
+    # 755 world-readable: web process (apache/www-data) traverses dir to read status.json
+    mkdir -p "$STATUS_DIR"
+    chmod 755 "$STATUS_DIR"
+    chown root:root "$STATUS_DIR"
 }
 
 setup_tmpfiles() {
@@ -547,6 +552,7 @@ install_systemd_files() {
         -e "s|%%SBIN_DIR%%|${SBIN_DIR}|g" \
         -e "s|%%RUN_DIR%%|${RUN_DIR}|g" \
         -e "s|%%CONFIG_DIR%%|${CONFIG_DIR}|g" \
+        -e "s|%%STATUS_DIR%%|${STATUS_DIR}|g" \
         "$SRC_DIR/systemd/eccube-fim-check.service" \
         > /etc/systemd/system/eccube-fim-check.service
     sed "s|%%INTERVAL%%|${CHECK_INTERVAL}|g" \
@@ -583,6 +589,7 @@ update_mode() {
     # belt-and-suspenders: LogsDirectory handles this on service start, but update_mode
     # runs before the service restarts so old installs without LogsDirectory still get the dir
     mkdir -p "$LOG_DIR" && chmod 700 "$LOG_DIR" && chown root:root "$LOG_DIR"
+    mkdir -p "$STATUS_DIR" && chmod 755 "$STATUS_DIR" && chown root:root "$STATUS_DIR"
     ECCUBE_ROOT=$(awk '/^root_path:/{print $2}' "$daemon_f")
     _read_interval_from_timer
     install_systemd_files

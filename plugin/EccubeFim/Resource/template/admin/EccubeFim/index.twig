@@ -1,0 +1,135 @@
+{% extends '@admin/default_frame.html.twig' %}
+
+{% block title %}{{ 'eccube_fim.title'|trans }}{% endblock %}
+{% block sub_title %}{{ 'eccube_fim.title'|trans }}{% endblock %}
+
+{% block main %}
+<div class="c-contentsArea__cols">
+    <div class="c-contentsArea__primaryCol">
+
+        {% if not status.available %}
+        {# ── エラー表示 ────────────────────────────────────────── #}
+        <div class="alert alert-danger" role="alert">
+            <i class="fa fa-exclamation-triangle mr-1"></i>
+            {{ status.error|trans }}
+        </div>
+        <p class="text-muted">
+            {{ 'eccube_fim.hint.reinstall'|trans|raw }}<br>
+            {{ 'eccube_fim.hint.check_status'|trans|raw }}
+        </p>
+
+        {% else %}
+
+        {# ── ステータスが古い場合の警告 ───────────────────────── #}
+        {% if status.status_stale %}
+        <div class="alert alert-warning" role="alert">
+            <i class="fa fa-clock mr-1"></i>
+            {{ 'eccube_fim.warning.stale'|trans({'%age%': status.generated_age_fmt}) }}
+        </div>
+        {% endif %}
+
+        {# ── サービス状態パネル ───────────────────────────────── #}
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fa fa-shield-alt mr-1"></i> {{ 'eccube_fim.panel.service_status'|trans }}</span>
+                <small class="text-muted">
+                    {{ status.generated_at_fmt ?? '' }} {{ 'eccube_fim.label.updated'|trans }}
+                    （{{ status.generated_age_fmt ?? '' }}）
+                </small>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-sm-4 mb-3">
+                        <div class="text-muted small mb-1">{{ 'eccube_fim.label.heartbeat'|trans }}</div>
+                        {% if status.heartbeat.enabled %}
+                            {% if status.heartbeat.health == 'OK' %}
+                                <span class="badge badge-success badge-pill">OK</span>
+                            {% elseif status.heartbeat.health == 'STALE' %}
+                                <span class="badge badge-warning badge-pill">STALE</span>
+                            {% else %}
+                                <span class="badge badge-danger badge-pill">NOT FOUND</span>
+                            {% endif %}
+                            <br>
+                            <small class="text-muted">
+                                {{ status.heartbeat.last_seen_fmt ?? '' }}
+                            </small>
+                        {% else %}
+                            <span class="badge badge-secondary badge-pill">{{ 'eccube_fim.label.disabled'|trans }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-sm-4 mb-3">
+                        <div class="text-muted small mb-1">{{ 'eccube_fim.label.suppressed_files'|trans }}</div>
+                        {% if status.suppressed_count > 0 %}
+                            <span class="badge badge-warning badge-pill">
+                                {{ status.suppressed_count }} {{ 'eccube_fim.label.count_unit'|trans }}
+                            </span>
+                        {% else %}
+                            <span class="badge badge-secondary badge-pill">0 {{ 'eccube_fim.label.count_unit'|trans }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-sm-4 mb-3">
+                        <div class="text-muted small mb-1">{{ 'eccube_fim.label.version_host'|trans }}</div>
+                        <small>
+                            v{{ status.daemon_version ?? 'N/A' }}<br>
+                            {{ status.hostname ?? '' }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# ── 最近の検知一覧 ────────────────────────────────────── #}
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fa fa-exclamation-circle mr-1"></i>
+                {{ 'eccube_fim.panel.recent_detections'|trans }}
+            </div>
+            {% if status.recent_detections is empty %}
+            <div class="card-body text-muted">
+                <i class="fa fa-check-circle text-success mr-1"></i> {{ 'eccube_fim.label.no_detections'|trans }}
+            </div>
+            {% else %}
+            <div class="card-body p-0">
+                <table class="table table-sm table-bordered table-hover mb-0">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>{{ 'eccube_fim.table.file_path'|trans }}</th>
+                            <th style="width: 180px">{{ 'eccube_fim.table.last_detected'|trans }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for det in status.recent_detections %}
+                        <tr>
+                            <td><code class="text-danger">{{ det.file_path }}</code></td>
+                            <td>{{ det.detected_at_fmt ?? '-' }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </div>
+
+        {# ── 最近のログ ────────────────────────────────────────── #}
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fa fa-list-alt mr-1"></i>
+                {{ 'eccube_fim.panel.recent_log'|trans }}
+            </div>
+            <div class="card-body p-0">
+                {% if status.recent_log is empty %}
+                <div class="p-3 text-muted">{{ 'eccube_fim.label.no_log'|trans }}</div>
+                {% else %}
+                <pre class="m-0 p-3"
+                     style="font-size: 0.78rem; max-height: 400px; overflow-y: auto;
+                            background: #1e1e1e; color: #d4d4d4; border-radius: 0;">{% for line in status.recent_log %}{{ line }}{% endfor %}
+                </pre>
+                {% endif %}
+            </div>
+        </div>
+
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}

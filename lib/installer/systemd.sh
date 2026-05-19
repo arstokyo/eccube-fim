@@ -8,6 +8,7 @@ install_systemd_files() {
         -e "s|%%SBIN_DIR%%|${SBIN_DIR}|g" \
         -e "s|%%RUN_DIR%%|${RUN_DIR}|g" \
         -e "s|%%CONFIG_DIR%%|${CONFIG_DIR}|g" \
+        -e "s|%%STATUS_DIR%%|${STATUS_DIR}|g" \
         "$SRC_DIR/systemd/eccube-fim-check.service" \
         > /etc/systemd/system/eccube-fim-check.service
     sed "s|%%INTERVAL%%|${CHECK_INTERVAL}|g" \

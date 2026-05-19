@@ -1,0 +1,26 @@
+eccube_fim.title: 'FIM監視ダッシュボード'
+
+eccube_fim.error.file_unreadable: 'ステータスファイルが読み取れません。デーモンが起動しているか確認してください。'
+eccube_fim.error.file_read_failed: 'ステータスファイルの読み取りに失敗しました。'
+eccube_fim.error.invalid_format: 'ステータスファイルのフォーマットが不正です。'
+
+eccube_fim.hint.reinstall: 'インストール: <code>./install.sh</code> を再実行してデーモンを起動してください。'
+eccube_fim.hint.check_status: '確認: <code>eccube-fim status</code> でサービス状態を確認してください。'
+
+eccube_fim.warning.stale: 'ステータス情報が古くなっています（%age%）。デーモンが停止している可能性があります。'
+
+eccube_fim.panel.service_status: 'サービス状態'
+eccube_fim.panel.recent_detections: '最近の検知（直近20件）'
+eccube_fim.panel.recent_log: '最近のログ（直近30件 INFO）'
+
+eccube_fim.label.updated: '更新'
+eccube_fim.label.heartbeat: 'ハートビート'
+eccube_fim.label.disabled: '無効'
+eccube_fim.label.suppressed_files: '抑止中ファイル'
+eccube_fim.label.count_unit: '件'
+eccube_fim.label.version_host: 'バージョン / ホスト'
+eccube_fim.label.no_detections: '検知なし'
+eccube_fim.label.no_log: 'ログなし'
+
+eccube_fim.table.file_path: 'ファイルパス'
+eccube_fim.table.last_detected: '最終検知日時'

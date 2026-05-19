@@ -19,6 +19,7 @@ update_mode() {
     # belt-and-suspenders: LogsDirectory handles this on service start, but update_mode
     # runs before the service restarts so old installs without LogsDirectory still get the dir
     mkdir -p "$LOG_DIR" && chmod 700 "$LOG_DIR" && chown root:root "$LOG_DIR"
+    mkdir -p "$STATUS_DIR" && chmod 755 "$STATUS_DIR" && chown root:root "$STATUS_DIR"
     ECCUBE_ROOT=$(awk '/^root_path:/{print $2}' "$daemon_f")
     _read_interval_from_timer
     install_systemd_files

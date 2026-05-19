@@ -12,6 +12,7 @@ from fim.heartbeat import write_heartbeat
 from fim.notify import build_channels, dispatch_notifications
 from fim.notify.base import Channel
 from fim.report import _Report, print_verbose_report
+from fim.status_writer import write_status
 
 log = logging.getLogger(__name__)
 
@@ -122,6 +123,7 @@ def _run_cycle(cfg: Config, db: Db, channels: list[Channel], dry_run: bool,
 def _finish_cycle(cfg: Config, db: Db, report: Optional[_Report]) -> None:
     db.close()
     write_heartbeat(cfg)
+    write_status(cfg)
     if report is not None:
         report.heartbeat_line = (
             f"  Written: {cfg.heartbeat_file}"

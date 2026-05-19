@@ -1,0 +1,15 @@
+{
+  "name": "eccube/eccube-fim",
+  "version": "1.0.0",
+  "description": "EC-CUBE FIM monitoring dashboard (read-only)",
+  "type": "eccube-plugin",
+  "require": {},
+  "config": {
+    "allow-plugins": {
+      "ec-cube/plugin-installer": true
+    }
+  },
+  "extra": {
+    "code": "EccubeFim"
+  }
+}
