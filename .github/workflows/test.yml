@@ -44,3 +44,15 @@ jobs:
         run: |
           ./build.sh
           git diff --exit-code install.sh
+
+      - name: Syntax-check plugin shell files
+        run: |
+          for f in plugin/build.sh lib/plugin/*.sh; do
+            bash -n "$f"
+            echo "OK: $f"
+          done
+
+      - name: Verify plugin/install-plugin.sh matches build output
+        run: |
+          ./plugin/build.sh
+          git diff --exit-code plugin/install-plugin.sh
