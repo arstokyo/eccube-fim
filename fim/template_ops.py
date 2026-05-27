@@ -9,7 +9,7 @@ from common.template_ops import (
     validate_template_vars as _validate_template_vars_raw,
 )
 from fim._template_data import _REQUIRED_VARS, _SAMPLE_DETECTIONS
-from fim.editor import open_in_editor, _file_hash
+from common.editor import file_hash as _file_hash, open_in_editor
 from fim.template import (
     BUILTIN_TEMPLATE_DIR, TEMPLATE_NAMES,
     render_subject, render_email_body, render_slack_body,

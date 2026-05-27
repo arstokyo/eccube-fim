@@ -1,7 +1,7 @@
 import os
 import sys
 
-from common.editor import file_hash as _file_hash, open_in_editor, show_email as _show_email, show_slack as _show_slack  # noqa: F401
+from common.editor import file_hash as _file_hash, open_in_editor, show_email as _show_email, show_slack as _show_slack
 from fim.config import Config, load_config
 from fim.validate import validate_config
 from fim.exceptions import FimConfigError

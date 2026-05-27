@@ -4,7 +4,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from common.upgrade import (  # noqa: F401
+from common.upgrade import (
     fetch_release_info as _fetch_release_info,
     check_python_requires as _check_python_requires,
     download_tarball as _download_tarball,
