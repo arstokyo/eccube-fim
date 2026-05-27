@@ -9,15 +9,11 @@ from common.upgrade import (  # noqa: F401
     check_python_requires as _check_python_requires,
     download_tarball as _download_tarball,
     find_extracted_root as _find_extracted_root,
+    write_version_stamp as _write_version_stamp,
 )
 from fim.config import INSTALL_SBIN_DIR, INSTALL_LIB_DIR, DEFAULT_CONFIG_DIR
 from fim.lifecycle import _require_root
 from fim.version import read_installed_version
-
-
-def _write_version_stamp(config_dir: str, version: str) -> None:
-    """Write the installed version string to the stamp file in config_dir."""
-    (Path(config_dir) / ".version").write_text(version.lstrip("v") + "\n", encoding="utf-8")
 
 
 def _run_migrations(config_dir: str) -> int:
@@ -59,11 +55,11 @@ def _migrate_only(config_dir: str) -> int:
 
 
 def _install_release(version: str, yes: bool, config_dir: str) -> int:
-    # known: sequential install steps; splitting would require passing version+config_dir as state
     """Prompt for confirmation, download `version`, replace library + binary.
 
     Return 0 on success, 1 if the user cancels or migrations fail.
     """
+    # known: sequential install steps; splitting would require passing version+config_dir as state
     print(f"Latest version : {version}")
     print(f"Will replace   : {INSTALL_LIB_DIR}/fim  and  {INSTALL_SBIN_DIR}/eccube-fim")
     if not yes:

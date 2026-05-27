@@ -1,8 +1,8 @@
 import os
 import sys
 
-from common.editor import file_hash as _file_hash, open_in_editor  # noqa: F401
-from fim.config import Config, NotifyEmail, NotifySlack, load_config
+from common.editor import file_hash as _file_hash, open_in_editor, show_email as _show_email, show_slack as _show_slack  # noqa: F401
+from fim.config import Config, load_config
 from fim.validate import validate_config
 from fim.exceptions import FimConfigError
 
@@ -61,21 +61,3 @@ def show_config(cfg: Config, config_dir: str) -> None:
     _show_slack(cfg.slack)
 
 
-def _show_email(email: NotifyEmail) -> None:
-    status = "enabled" if email.enabled else "disabled"
-    print(f"  email  : {status}")
-    if not email.enabled:
-        return
-    print(f"    smtp : {email.smtp_host}:{email.smtp_port} (as {email.smtp_user})")
-    print(f"    from : {email.from_addr}")
-    recip = ", ".join(email.recipients) if email.recipients else "(none)"
-    print(f"    to   : {recip}")
-
-
-def _show_slack(slack: NotifySlack) -> None:
-    status = "enabled" if slack.enabled else "disabled"
-    print(f"  slack  : {status}")
-    if not slack.enabled:
-        return
-    for f in slack.webhook_url_files:
-        print(f"    webhook : {f}")

@@ -11,7 +11,7 @@ def setup_notify_interactive(config_dir: str) -> int:
     """
     notify_path = Path(config_dir) / "notify.yaml"
     try:
-        existing: dict = yaml.safe_load(notify_path.read_text()) or {}
+        existing: dict = yaml.safe_load(notify_path.read_text(encoding="utf-8")) or {}
     except OSError:
         existing = {}
 
@@ -21,7 +21,8 @@ def setup_notify_interactive(config_dir: str) -> int:
     result["slack"] = _prompt_slack(existing.get("slack") or {})
 
     try:
-        notify_path.write_text(yaml.dump(result, allow_unicode=True, sort_keys=False))
+        notify_path.write_text(yaml.dump(result, allow_unicode=True, sort_keys=False),
+                               encoding="utf-8")
         print(f"Saved: {notify_path}")
     except OSError as e:
         print(f"Error writing {notify_path}: {e}", file=sys.stderr)
@@ -38,7 +39,7 @@ def _prompt_email(current: dict) -> dict:
     return {
         "enabled":            True,
         "smtp_host":          _ask("SMTP host", current.get("smtp_host", "")),
-        "smtp_port":          int(_ask("SMTP port", str(current.get("smtp_port", 587)))),
+        "smtp_port":          _safe_int(_ask("SMTP port", str(current.get("smtp_port", 587))), 587),
         "smtp_user":          _ask("SMTP user (blank = no auth)", current.get("smtp_user", "")),
         "smtp_password_file": _ask("SMTP password file",
                                    current.get("smtp_password_file",
@@ -58,6 +59,14 @@ def _prompt_slack(current: dict) -> dict:
         "enabled":           True,
         "webhook_url_files": [_ask("Webhook URL file path", existing_files[0])],
     }
+
+
+def _safe_int(value: str, default: int) -> int:
+    try:
+        return int(value)
+    except ValueError:
+        print(f"  Invalid value {value!r} — using {default}", file=sys.stderr)
+        return default
 
 
 def _ask(prompt: str, default: str) -> str:

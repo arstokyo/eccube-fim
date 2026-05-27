@@ -5,6 +5,7 @@ import shutil
 import sys
 import tarfile
 import urllib.request
+from pathlib import Path
 
 from common.version import REPO_SLUG, VERSION_CHECK_URL
 
@@ -21,7 +22,7 @@ def fetch_release_info() -> tuple[str, str]:
     try:
         with urllib.request.urlopen(req, timeout=_FETCH_TIMEOUT) as resp:
             data = json.loads(resp.read())
-    except Exception as e:
+    except Exception as e:  # known: wraps all urllib/json errors into RuntimeError for callers
         raise RuntimeError(
             f"Could not reach GitHub releases API: {e}\n"
             f"Check your network or visit: https://github.com/{REPO_SLUG}/releases"
@@ -49,7 +50,10 @@ def check_python_requires(requires: str) -> None:
 
 
 def download_tarball(version: str, dest_dir: str) -> None:
-    """Download and extract the release tarball for `version` into `dest_dir`."""
+    """Download and extract the release tarball for `version` into `dest_dir`.
+
+    The archive is removed after extraction.
+    """
     url = f"https://github.com/{REPO_SLUG}/archive/refs/tags/{version}.tar.gz"
     archive = os.path.join(dest_dir, "eccube-fim.tar.gz")
     req = urllib.request.Request(url, headers={"User-Agent": "eccube-fim"})
@@ -72,3 +76,7 @@ def find_extracted_root(dest_dir: str) -> str:
     if len(entries) != 1:
         raise RuntimeError(f"Unexpected tarball layout in {dest_dir}: {entries}")
     return os.path.join(dest_dir, entries[0])
+
+
+def write_version_stamp(config_dir: str, version: str) -> None:
+    (Path(config_dir) / ".version").write_text(version.lstrip("v") + "\n", encoding="utf-8")

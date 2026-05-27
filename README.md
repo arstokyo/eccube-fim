@@ -40,6 +40,56 @@ Supported OS: Oracle Linux 9, RHEL 9, Ubuntu 24.04, openSUSE Leap 15, Arch Linux
 
 ---
 
+## Malware Scanner
+
+ClamAV-based scanner for the EC-CUBE web root. Runs daily, sends email and
+Slack alerts on detection, suppresses duplicate alerts within a configurable
+window.
+
+### Install
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/arstokyo/eccube-fim/main/install-malware.sh | sudo bash
+```
+
+The installer will:
+- Install ClamAV (`clamscan`, `freshclam`) for your OS
+- Copy `eccube-malware` to `/usr/local/sbin/`
+- Create `/etc/eccube-fim/malware.yaml` (edit scan paths before use)
+- Enable `clamav-scan.timer` (daily 03:00) and `clamav-freshclam.timer` (every 3h)
+- Run an initial `freshclam` signature update
+
+After install, edit the scan targets and verify:
+
+```bash
+vi /etc/eccube-fim/malware.yaml   # set scan_targets
+eccube-malware config validate
+eccube-malware test mail
+eccube-malware check --dry-run
+```
+
+### Requirements
+
+- Root access
+- systemd
+- Network access for ClamAV signature updates (`freshclam`)
+- SMTP account for email alerts (shared with eccube-fim if both are installed)
+
+Supported OS: Oracle Linux 9, RHEL 9, Ubuntu 24.04
+
+### Notification config
+
+If eccube-fim is already installed, `eccube-malware` reuses the same
+`/etc/eccube-fim/notify.yaml`. No additional email/Slack setup needed.
+
+If installing malware scanner standalone, run the setup wizard:
+
+```bash
+eccube-malware config setup-notify
+```
+
+---
+
 ## Plugin (EC-CUBE Admin Dashboard)
 
 The plugin adds a read-only FIM status dashboard to the EC-CUBE admin panel
@@ -129,6 +179,67 @@ Override built-in email/Slack message templates without editing config YAML.
 |---|---|
 | `eccube-fim upgrade` | Download and install the latest release |
 | `eccube-fim uninstall` | Stop the service and remove all installed files |
+
+---
+
+## eccube-malware CLI reference
+
+All commands require root (`sudo`).
+
+### Daily operations
+
+| Command | Description |
+|---|---|
+| `eccube-malware check` | Run a ClamAV scan immediately (systemd runs this automatically at 03:00) |
+| `eccube-malware check --dry-run` | Scan and log detections but skip notifications |
+| `eccube-malware status` | Dashboard: timer state, last scan log, suppression DB count, ClamAV version |
+| `eccube-malware log` | Tail the most recent scan log (last 20 lines); `--lines N` or `--level ERROR` |
+
+### Configuration
+
+| Command | Description |
+|---|---|
+| `eccube-malware config show` | Print effective config from `malware.yaml` + `notify.yaml` |
+| `eccube-malware config validate` | Validate config files and print a status report |
+| `eccube-malware config edit [malware\|notify]` | Open a config file in `$EDITOR`; validates on save |
+| `eccube-malware config timer [HH:MM]` | Show or change the daily scan time (e.g. `03:00`, `02:30`) |
+| `eccube-malware config setup-notify` | Interactive wizard to enable or reconfigure email/Slack |
+
+### Scan targets
+
+Managed via `config target`; persisted to `/etc/eccube-fim/malware.yaml`.
+
+| Command | Description |
+|---|---|
+| `eccube-malware config target list` | List all scan target paths |
+| `eccube-malware config target add <path>` | Add a directory path to `scan_targets` |
+| `eccube-malware config target remove <path>` | Remove a directory path from `scan_targets` |
+
+### Notification templates
+
+| Command | Description |
+|---|---|
+| `eccube-malware config template list` | Show all templates and whether a user override is active |
+| `eccube-malware config template show <name>` | Print the active template (`subject`, `email`, or `slack`) |
+| `eccube-malware config template edit <name>` | Open (or create) an override in `$EDITOR` |
+| `eccube-malware config template reset <name>` | Delete override and revert to built-in |
+| `eccube-malware config template preview` | Render all templates with sample detection data |
+
+### Diagnostics
+
+| Command | Description |
+|---|---|
+| `eccube-malware test mail` | Send a test email to verify SMTP reachability |
+| `eccube-malware test slack` | Send a test Slack message via webhook |
+| `eccube-malware db list` | Show all suppressed detection records |
+| `eccube-malware db clear` | Remove suppression records — all, or `--file <path>` for one file |
+
+### Lifecycle
+
+| Command | Description |
+|---|---|
+| `eccube-malware upgrade` | Download and install the latest release |
+| `eccube-malware uninstall` | Stop timers and remove all installed files; `--keep-config` preserves `malware.yaml` and the suppression DB |
 
 ---
 

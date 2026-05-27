@@ -1,8 +1,7 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 
-import yaml
-
+from common.config import load_yaml as _load_yaml
 from common.constants import (  # noqa: F401  — backward compat re-export
     DEFAULT_CONFIG_DIR,
     DEFAULT_SMTP_PORT,
@@ -56,14 +55,6 @@ def load_config(config_dir: str = DEFAULT_CONFIG_DIR) -> Config:
     cfg = _parse(main, targets, notify)
     cfg.config_dir = config_dir
     return cfg
-
-
-def _load_yaml(path: Path) -> dict:
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            return yaml.safe_load(f) or {}
-    except OSError as e:
-        raise FimConfigError(f"Cannot read {path.name}: {e}") from e
 
 
 def _validate(main: dict, targets: dict, notify: dict) -> None:

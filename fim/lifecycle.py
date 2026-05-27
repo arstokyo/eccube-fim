@@ -3,20 +3,13 @@ import shutil
 import subprocess
 import sys
 
+from common.lifecycle import require_root as _require_root
 from fim.config import (
     DEFAULT_CONFIG_DIR,
     INSTALL_SBIN_DIR, INSTALL_LIB_DIR, INSTALL_SYSTEMD_DIR,
     INSTALL_LOGROTATE_PATH, INSTALL_TMPFILES_PATH,
     INSTALL_TIMER_NAME, INSTALL_SERVICE_NAME,
 )
-
-
-def _require_root() -> bool:
-    """Return True if running as root; print an error and return False otherwise."""
-    if os.geteuid() == 0:
-        return True
-    print("Error: must be run as root", file=sys.stderr)
-    return False
 
 
 def _systemctl(*args: str) -> None:

@@ -1,9 +1,13 @@
-import re
 import shutil
 import socket
-import sys
 from pathlib import Path
 
+from common.template_ops import (
+    user_template_dir as _user_template_dir,
+    resolve_template as _resolve_raw,
+    unknown_template as _unknown_raw,
+    validate_template_vars as _validate_template_vars_raw,
+)
 from fim._template_data import _REQUIRED_VARS, _SAMPLE_DETECTIONS
 from fim.editor import open_in_editor, _file_hash
 from fim.template import (
@@ -12,17 +16,10 @@ from fim.template import (
 )
 
 
-def _user_template_dir(config_dir: str) -> Path:
-    return Path(config_dir) / "templates"
-
-
+# Place these wrappers AFTER the TEMPLATE_NAMES, BUILTIN_TEMPLATE_DIR, and
+# _REQUIRED_VARS constants are defined — they reference those names at call time.
 def _resolve(config_dir: str, name: str) -> tuple[Path, bool]:
-    """Return (path, is_override). is_override=True when a user override exists."""
-    fname = TEMPLATE_NAMES[name]
-    override = _user_template_dir(config_dir) / fname
-    if override.exists():
-        return override, True
-    return BUILTIN_TEMPLATE_DIR / fname, False
+    return _resolve_raw(config_dir, name, TEMPLATE_NAMES, BUILTIN_TEMPLATE_DIR)
 
 
 def list_templates(config_dir: str) -> int:
@@ -73,24 +70,6 @@ def edit_template(config_dir: str, name: str) -> int:
     return 0
 
 
-def _validate_template_vars(path: Path, name: str) -> None:
-    """Warn if the saved template omits a variable required by the renderer.
-
-    Uses regex extraction rather than string.Template.substitute() — substitute()
-    raises only on unknown variables, not on missing ones; regex detects absences.
-    """
-    text = path.read_text(encoding="utf-8")
-    used = set(re.findall(r"\$\{?([a-zA-Z_]\w*)\}?", text))
-    missing = _REQUIRED_VARS.get(name, set()) - used
-    if missing:
-        missing_str = ", ".join(f"${v}" for v in sorted(missing))
-        print(
-            f"Warning: template '{name}' is missing required variable(s): "
-            f"{missing_str} — the next check cycle may fail to render.",
-            file=sys.stderr,
-        )
-
-
 def reset_template(config_dir: str, name: str) -> int:
     """Delete the user override so the built-in resumes."""
     if name not in TEMPLATE_NAMES:
@@ -126,5 +105,8 @@ def preview_template(config_dir: str) -> int:
 
 
 def _unknown(name: str) -> None:
-    valid = ", ".join(sorted(TEMPLATE_NAMES))
-    print(f"Unknown template: {name!r}. Choose one of: {valid}", file=sys.stderr)
+    _unknown_raw(name, TEMPLATE_NAMES)
+
+
+def _validate_template_vars(path: Path, name: str) -> None:
+    _validate_template_vars_raw(path, name, _REQUIRED_VARS, cycle="check")
