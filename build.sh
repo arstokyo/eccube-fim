@@ -19,3 +19,17 @@ cat \
 
 chmod +x "$OUT"
 echo "Built $OUT ($(wc -l < "$OUT") lines)"
+
+# --- install-malware.sh ---
+MALWARE_OUT="install-malware.sh"
+
+cat \
+    lib/installer/header.sh \
+    lib/installer/helpers.sh \
+    lib/installer/fetch.sh \
+    lib/installer/malware.sh \
+    lib/installer/malware_entry.sh \
+    > "$MALWARE_OUT"
+
+chmod +x "$MALWARE_OUT"
+echo "Built $MALWARE_OUT ($(wc -l < "$MALWARE_OUT") lines)"
