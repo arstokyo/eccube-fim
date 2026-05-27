@@ -74,7 +74,7 @@ def test_edit_config_file_missing_file(capsys, tmp_path):
 def test_open_in_editor_uses_EDITOR_env(tmp_path):
     test_file = str(tmp_path / "f.txt")
     with patch.dict(os.environ, {"EDITOR": "myeditor"}):
-        with patch("fim.editor.subprocess.run") as mock_run:
+        with patch("common.editor.subprocess.run") as mock_run:
             open_in_editor(test_file)
     mock_run.assert_called_once_with(["myeditor", test_file])
 
@@ -82,7 +82,7 @@ def test_open_in_editor_uses_EDITOR_env(tmp_path):
 def test_open_in_editor_falls_back_to_vi(tmp_path):
     env = {k: v for k, v in os.environ.items() if k not in ("EDITOR", "VISUAL")}
     with patch.dict(os.environ, env, clear=True):
-        with patch("fim.editor.subprocess.run") as mock_run:
+        with patch("common.editor.subprocess.run") as mock_run:
             open_in_editor(str(tmp_path / "f.txt"))
     mock_run.assert_called_once_with(["vi", str(tmp_path / "f.txt")])
 
@@ -91,7 +91,7 @@ def test_open_in_editor_uses_VISUAL_fallback(tmp_path):
     env = {k: v for k, v in os.environ.items() if k not in ("EDITOR", "VISUAL")}
     env["VISUAL"] = "nano"
     with patch.dict(os.environ, env, clear=True):
-        with patch("fim.editor.subprocess.run") as mock_run:
+        with patch("common.editor.subprocess.run") as mock_run:
             open_in_editor(str(tmp_path / "f.txt"))
     mock_run.assert_called_once_with(["nano", str(tmp_path / "f.txt")])
 
