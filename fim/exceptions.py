@@ -1,5 +1,4 @@
-class FimConfigError(Exception):
-    """Raised when a config file (daemon.yaml, targets.yaml, or notify.yaml) is missing, unreadable, or invalid."""
+from common.exceptions import FimConfigError  # noqa: F401
 
 
 class FimGitError(Exception):

@@ -100,7 +100,7 @@ def test_resolve_db_path_falls_back_on_missing_yaml(tmp_path):
 def test_run_migrations_delegates_to_runner(tmp_path, monkeypatch):
     r = _runner(tmp_path)
     _write_migration(r._migrations_dir, 1)
-    monkeypatch.setattr("fim.migration.MigrationRunner", lambda config_dir: r)
+    monkeypatch.setattr("fim.migration.MigrationRunner", lambda db_path, migrations_dir, config_dir: r)
     assert run_migrations(str(tmp_path)) == 1
 
 

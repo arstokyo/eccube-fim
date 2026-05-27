@@ -3,45 +3,27 @@ from pathlib import Path
 
 import yaml
 
-from fim.exceptions import FimConfigError
+from common.constants import (  # noqa: F401  — backward compat re-export
+    DEFAULT_CONFIG_DIR,
+    DEFAULT_SMTP_PORT,
+    INSTALL_SBIN_DIR,
+    INSTALL_LIB_DIR,
+    INSTALL_SYSTEMD_DIR,
+    VERSION_CHECK_STAMP,
+    INSTALL_STATUS_DIR,
+    INSTALL_STATUS_FILE,
+)
+from common.notify_config import NotifyEmail, NotifySlack  # noqa: F401
+from common.exceptions import FimConfigError
 
-DEFAULT_CONFIG_DIR      = "/etc/eccube-fim"
+# FIM-specific constants (not shared with malware)
 DEFAULT_STATE_DB        = "/etc/eccube-fim/state.db"
 DEFAULT_HEARTBEAT_FILE  = "/run/eccube-fim/heartbeat"
-DEFAULT_SMTP_PORT       = 587
 DEFAULT_SUPPRESS_HOURS  = 1
-
-# Install paths — must match install.sh constants exactly
-INSTALL_SBIN_DIR        = "/usr/local/sbin"
-INSTALL_LIB_DIR         = "/usr/local/lib/eccube-fim"
-INSTALL_SYSTEMD_DIR     = "/etc/systemd/system"
-INSTALL_LOGROTATE_PATH  = "/etc/logrotate.d/eccube-fim"
-INSTALL_TMPFILES_PATH   = "/etc/tmpfiles.d/eccube-fim.conf"
 INSTALL_TIMER_NAME      = "eccube-fim-check.timer"
 INSTALL_SERVICE_NAME    = "eccube-fim-check.service"
-# /run is tmpfs on systemd; stamp disappears after reboot — forces a fresh check after restart
-VERSION_CHECK_STAMP     = "/run/eccube-fim/version_check"
-INSTALL_STATUS_DIR      = "/var/lib/eccube-fim"
-INSTALL_STATUS_FILE     = "/var/lib/eccube-fim/status.json"
-
-
-@dataclass
-class NotifyEmail:
-    """SMTP notification channel configuration."""
-    smtp_host: str = ""
-    smtp_port: int = DEFAULT_SMTP_PORT
-    smtp_user: str = ""
-    smtp_password_file: str = ""
-    from_addr: str = ""
-    recipients: list[str] = field(default_factory=list)
-    enabled: bool = True
-
-
-@dataclass
-class NotifySlack:
-    """Slack notification channel configuration."""
-    enabled: bool = False
-    webhook_url_files: list[str] = field(default_factory=list)
+INSTALL_LOGROTATE_PATH  = "/etc/logrotate.d/eccube-fim"
+INSTALL_TMPFILES_PATH   = "/etc/tmpfiles.d/eccube-fim.conf"
 
 
 @dataclass

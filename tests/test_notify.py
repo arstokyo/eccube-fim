@@ -58,7 +58,7 @@ def test_email_channel_sends_rendered_message(monkeypatch, tmp_path):
         sent["subject"] = subject
         sent["body"] = body
 
-    monkeypatch.setattr("fim.notify.email._send_smtp", fake_send_smtp)
+    monkeypatch.setattr("common.notify.email._send_smtp", fake_send_smtp)
 
     notification = RenderedNotification(
         subject="[ALERT] host-a",
@@ -76,7 +76,7 @@ def test_email_channel_returns_false_on_failure(monkeypatch):
     def fail_send_smtp(email_cfg, subject, body):
         raise OSError("smtp down")
 
-    monkeypatch.setattr("fim.notify.email._send_smtp", fail_send_smtp)
+    monkeypatch.setattr("common.notify.email._send_smtp", fail_send_smtp)
 
     notification = RenderedNotification(subject="[ALERT]", bodies={"email": "body"})
     assert EmailChannel(cfg).send(notification) is False
@@ -148,7 +148,7 @@ def test_send_test_notification_email_only_skips_slack(make_config, monkeypatch)
     slack_calls = []
 
     monkeypatch.setattr("fim.notify._render", lambda *a, **kw: _FAKE_NOTIFICATION)
-    monkeypatch.setattr("fim.notify.email._send_smtp", lambda *a, **kw: None)
+    monkeypatch.setattr("common.notify.email._send_smtp", lambda *a, **kw: None)
 
     def fake_slack_send(self, notification):
         slack_calls.append(notification)
@@ -174,7 +174,7 @@ def test_send_test_notification_slack_only_skips_email(make_config, monkeypatch)
     def fake_smtp(email_cfg, subject, body):
         email_calls.append(subject)
 
-    monkeypatch.setattr("fim.notify.email._send_smtp", fake_smtp)
+    monkeypatch.setattr("common.notify.email._send_smtp", fake_smtp)
     monkeypatch.setattr("fim.notify.slack.SlackChannel.send", lambda self, n: True)
 
     results = send_test_notification(cfg, "host-a", channel_name="slack")
@@ -190,7 +190,7 @@ def test_send_test_notification_no_filter_sends_all(make_config, monkeypatch):
     cfg.slack.webhook_url_files = ["/tmp/fake"]
 
     monkeypatch.setattr("fim.notify._render", lambda *a, **kw: _FAKE_NOTIFICATION)
-    monkeypatch.setattr("fim.notify.email._send_smtp", lambda *a, **kw: None)
+    monkeypatch.setattr("common.notify.email._send_smtp", lambda *a, **kw: None)
     monkeypatch.setattr("fim.notify.slack.SlackChannel.send", lambda self, n: True)
 
     results = send_test_notification(cfg, "host-a")
