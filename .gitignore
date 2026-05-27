@@ -26,8 +26,10 @@ slack.webhook
 # Reference repos (local study only, not part of source)
 refs/
 
-# Original spec (reference only, not part of source)
+# Reference docs (local only, not part of source)
 docs/original-spec.md
+docs/malware-specs.md
+docs/malware-specs-origin.md
 
 # Local planning and issue tracking (private, not part of source)
 plans/
