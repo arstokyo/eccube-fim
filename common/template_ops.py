@@ -3,7 +3,7 @@ import shutil
 import string
 import sys
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 from common.editor import file_hash, open_in_editor
 
@@ -49,7 +49,7 @@ def validate_template_vars(path: Path, name: str,
 def list_templates_impl(config_dir: str,
                         template_names: dict[str, str], builtin_dir: Path) -> int:
     """Print all template names and whether a user override is active."""
-    fw = max(len(fname) for fname in template_names.values()) + 2
+    fw = max((len(fname) for fname in template_names.values()), default=20) + 2
     print(f"{'NAME':<10} {'FILE':<{fw}} {'SOURCE'}")
     print("-" * (fw + 18))
     for name, fname in sorted(template_names.items()):
@@ -74,7 +74,7 @@ def show_template_impl(config_dir: str, name: str,
 
 def edit_template_impl(config_dir: str, name: str,
                        template_names: dict[str, str], builtin_dir: Path,
-                       required_vars: dict[str, Any], cycle: str) -> int:
+                       required_vars: dict[str, set[str]], cycle: str) -> int:
     """Open (or create) the override template in $EDITOR.
 
     Creates the override dir and copies the built-in on first use.

@@ -1,5 +1,4 @@
 import socket
-from pathlib import Path
 
 from common.template_ops import (
     list_templates_impl,
