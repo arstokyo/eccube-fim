@@ -9,3 +9,5 @@ INSTALL_LOGROTATE_DIR = "/etc/logrotate.d"
 VERSION_CHECK_STAMP   = "/run/eccube-fim/version_check"
 INSTALL_STATUS_DIR    = "/var/lib/eccube-fim"
 INSTALL_STATUS_FILE   = "/var/lib/eccube-fim/status.json"
+# Presence of this file means eccube-malware is installed; used by FIM uninstall guard
+INSTALL_MALWARE_MARKER = "/var/lib/eccube-fim/malware-installed"

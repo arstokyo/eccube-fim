@@ -10,13 +10,14 @@ cat \
     lib/installer/fetch.sh \
     lib/installer/packages.sh \
     lib/installer/files.sh \
+    lib/installer/wizard_notify.sh \
     lib/installer/wizard.sh \
     lib/installer/git.sh \
     lib/installer/systemd.sh \
     lib/installer/lifecycle.sh \
     lib/installer/main.sh \
     > "$OUT"
-sed -i "s|%%SCRIPT_NAME%%|${OUT}|" "$OUT"
+sed -i "s|%%SCRIPT_NAME%%|${OUT}|g" "$OUT"
 
 chmod +x "$OUT"
 echo "Built $OUT ($(wc -l < "$OUT") lines)"
@@ -29,10 +30,11 @@ cat \
     lib/installer/helpers.sh \
     lib/installer/fetch.sh \
     lib/installer/files.sh \
+    lib/installer/wizard_notify.sh \
     lib/installer/malware.sh \
     lib/installer/malware_entry.sh \
     > "$MALWARE_OUT"
-sed -i "s|%%SCRIPT_NAME%%|${MALWARE_OUT}|" "$MALWARE_OUT"
+sed -i "s|%%SCRIPT_NAME%%|${MALWARE_OUT}|g" "$MALWARE_OUT"
 
 chmod +x "$MALWARE_OUT"
 echo "Built $MALWARE_OUT ($(wc -l < "$MALWARE_OUT") lines)"

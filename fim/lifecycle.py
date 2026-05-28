@@ -1,9 +1,14 @@
 import os
 import shutil
-import subprocess
-import sys
 
-from common.lifecycle import require_root as _require_root
+from common.constants import INSTALL_MALWARE_MARKER
+from common.lifecycle import (
+    require_root as _require_root,
+    stop_and_disable_units,
+    remove_unit_files,
+    remove_lib_subdir,
+    remove_common_if_no_companion,
+)
 from fim.config import (
     DEFAULT_CONFIG_DIR,
     INSTALL_SBIN_DIR, INSTALL_LIB_DIR, INSTALL_SYSTEMD_DIR,
@@ -11,20 +16,13 @@ from fim.config import (
     INSTALL_TIMER_NAME, INSTALL_SERVICE_NAME,
 )
 
-
-def _systemctl(*args: str) -> None:
-    # non-zero is normal when unit is already stopped/disabled
-    subprocess.run(["systemctl", *args], check=False)
+_TIMERS   = [INSTALL_TIMER_NAME]
+_SERVICES = [INSTALL_SERVICE_NAME]
 
 
 def _stop_and_remove_units() -> None:
-    _systemctl("stop", INSTALL_TIMER_NAME, INSTALL_SERVICE_NAME)
-    _systemctl("disable", INSTALL_TIMER_NAME)
-    for fname in (INSTALL_TIMER_NAME, INSTALL_SERVICE_NAME):
-        path = os.path.join(INSTALL_SYSTEMD_DIR, fname)
-        if os.path.exists(path):
-            os.remove(path)
-    _systemctl("daemon-reload")
+    stop_and_disable_units(_TIMERS)
+    remove_unit_files(_TIMERS + _SERVICES, INSTALL_SYSTEMD_DIR)
 
 
 def _remove_files(keep_config: bool) -> None:
@@ -33,9 +31,8 @@ def _remove_files(keep_config: bool) -> None:
         if os.path.exists(path):
             os.remove(path)
             print(f"Removed {path}")
-    if os.path.isdir(INSTALL_LIB_DIR):
-        shutil.rmtree(INSTALL_LIB_DIR)
-        print(f"Removed {INSTALL_LIB_DIR}")
+    remove_lib_subdir(INSTALL_LIB_DIR, "fim")
+    remove_common_if_no_companion(INSTALL_LIB_DIR, INSTALL_MALWARE_MARKER)
     if not keep_config and os.path.isdir(DEFAULT_CONFIG_DIR):
         shutil.rmtree(DEFAULT_CONFIG_DIR)
         print(f"Removed {DEFAULT_CONFIG_DIR}")
@@ -46,7 +43,7 @@ def uninstall(keep_config: bool = False, yes: bool = False) -> int:
     if not _require_root():
         return 1
     config_note = " (config preserved)" if keep_config else f" + {DEFAULT_CONFIG_DIR}"
-    print(f"This will remove: {INSTALL_SBIN_DIR}/eccube-fim, {INSTALL_LIB_DIR}{config_note}")
+    print(f"This will remove: {INSTALL_SBIN_DIR}/eccube-fim, {INSTALL_LIB_DIR}/fim/{config_note}")
     if not yes:
         answer = input("Proceed with uninstall? [y/N]: ").strip().lower()
         if answer != "y":

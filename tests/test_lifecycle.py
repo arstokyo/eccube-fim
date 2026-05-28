@@ -10,17 +10,22 @@ from fim.upgrade import upgrade
 @pytest.fixture
 def fake_install(monkeypatch, tmp_path):
     """Redirect all lifecycle install paths to tmp_path."""
-    monkeypatch.setattr("fim.lifecycle.INSTALL_SBIN_DIR",       str(tmp_path))
-    monkeypatch.setattr("fim.lifecycle.INSTALL_LIB_DIR",        str(tmp_path / "lib"))
-    monkeypatch.setattr("fim.lifecycle.INSTALL_SYSTEMD_DIR",    str(tmp_path / "systemd"))
-    monkeypatch.setattr("fim.lifecycle.INSTALL_LOGROTATE_PATH", str(tmp_path / "logrotate"))
-    monkeypatch.setattr("fim.lifecycle.INSTALL_TMPFILES_PATH",  str(tmp_path / "tmpfiles"))
-    monkeypatch.setattr("fim.lifecycle.DEFAULT_CONFIG_DIR",     str(tmp_path / "cfg"))
-    monkeypatch.setattr("fim.lifecycle._systemctl", lambda *a: None)
+    monkeypatch.setattr("fim.lifecycle.INSTALL_SBIN_DIR",         str(tmp_path))
+    monkeypatch.setattr("fim.lifecycle.INSTALL_LIB_DIR",          str(tmp_path / "lib"))
+    monkeypatch.setattr("fim.lifecycle.INSTALL_SYSTEMD_DIR",      str(tmp_path / "systemd"))
+    monkeypatch.setattr("fim.lifecycle.INSTALL_LOGROTATE_PATH",   str(tmp_path / "logrotate"))
+    monkeypatch.setattr("fim.lifecycle.INSTALL_TMPFILES_PATH",    str(tmp_path / "tmpfiles"))
+    monkeypatch.setattr("fim.lifecycle.DEFAULT_CONFIG_DIR",       str(tmp_path / "cfg"))
+    # redirect marker so companion-absent path is exercised in all base tests
+    monkeypatch.setattr("fim.lifecycle.INSTALL_MALWARE_MARKER",   str(tmp_path / "no-marker"))
+    monkeypatch.setattr("common.lifecycle.subprocess.run",        lambda *a, **kw: None)
     monkeypatch.setattr("os.geteuid", lambda: 0)
 
     (tmp_path / "eccube-fim").write_text("")
-    (tmp_path / "lib").mkdir()
+    lib = tmp_path / "lib"
+    lib.mkdir()
+    (lib / "fim").mkdir()
+    (lib / "common").mkdir()
     (tmp_path / "cfg").mkdir()
     (tmp_path / "systemd").mkdir()
     return tmp_path
@@ -46,15 +51,43 @@ def test_uninstall_cancels_on_no(monkeypatch, capsys):
 def test_uninstall_removes_files(fake_install):
     tmp = fake_install
     assert uninstall(keep_config=False, yes=True) == 0
-    assert not (tmp / "lib").exists()
+    assert not (tmp / "lib" / "fim").exists()
+    assert not (tmp / "lib" / "common").exists()
+    assert not (tmp / "lib").exists()   # empty dir cleaned up
     assert not (tmp / "cfg").exists()
 
 
 def test_uninstall_preserves_config_with_keep_config(fake_install):
     tmp = fake_install
     assert uninstall(keep_config=True, yes=True) == 0
-    assert not (tmp / "lib").exists()
+    assert not (tmp / "lib" / "fim").exists()
     assert (tmp / "cfg").exists()
+
+
+def test_uninstall_preserves_common_when_malware_installed(monkeypatch, tmp_path):
+    """common/ must survive when the malware marker is present."""
+    lib = tmp_path / "lib"
+    (lib / "fim").mkdir(parents=True)
+    (lib / "common").mkdir()
+    marker = tmp_path / "malware-installed"
+    marker.write_text("")
+
+    monkeypatch.setattr("fim.lifecycle.INSTALL_SBIN_DIR",         str(tmp_path))
+    monkeypatch.setattr("fim.lifecycle.INSTALL_LIB_DIR",          str(lib))
+    monkeypatch.setattr("fim.lifecycle.INSTALL_SYSTEMD_DIR",      str(tmp_path / "systemd"))
+    monkeypatch.setattr("fim.lifecycle.INSTALL_LOGROTATE_PATH",   str(tmp_path / "logrotate"))
+    monkeypatch.setattr("fim.lifecycle.INSTALL_TMPFILES_PATH",    str(tmp_path / "tmpfiles"))
+    monkeypatch.setattr("fim.lifecycle.DEFAULT_CONFIG_DIR",       str(tmp_path / "cfg"))
+    monkeypatch.setattr("fim.lifecycle.INSTALL_MALWARE_MARKER",   str(marker))
+    monkeypatch.setattr("common.lifecycle.subprocess.run",        lambda *a, **kw: None)
+    monkeypatch.setattr("os.geteuid", lambda: 0)
+    (tmp_path / "cfg").mkdir()
+    (tmp_path / "systemd").mkdir()
+
+    assert uninstall(keep_config=True, yes=True) == 0
+    assert not (lib / "fim").exists()
+    assert (lib / "common").exists()   # must survive — malware still installed
+    assert lib.exists()
 
 
 # ---------------------------------------------------------------------------
