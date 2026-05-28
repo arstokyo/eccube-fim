@@ -23,7 +23,7 @@ class NotifySlack:
     webhook_url_files: list[str] = field(default_factory=list)
 
 
-def print_secrets_status(email: "NotifyEmail", slack: "NotifySlack") -> None:
+def print_secrets_status(email: NotifyEmail, slack: NotifySlack) -> None:
     """Print whether the SMTP password file and Slack webhook files exist on disk."""
     if email.enabled:
         pw_ok = bool(email.smtp_password_file) and Path(email.smtp_password_file).exists()

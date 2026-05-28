@@ -704,6 +704,7 @@ migrate_only_mode() {
     _read_interval_from_timer
     install_systemd_files
     systemctl restart eccube-fim-check.timer
+    install_post_merge_hook
     info "Force-retry complete"
 }
 
@@ -788,7 +789,7 @@ post_install_checks() {
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
-# known: 35 lines — orchestration function; length reflects install steps, not complexity
+# known: 45 lines — orchestration function; length reflects install steps, not complexity
 main() {
     parse_args "$@"
     require_root
