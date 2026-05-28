@@ -3,7 +3,10 @@ import subprocess
 import sys
 from pathlib import Path
 
-TIMER_UNIT = "/etc/systemd/system/eccube-fim-check.timer"
+from common.constants import INSTALL_SYSTEMD_DIR
+from fim.config import INSTALL_TIMER_NAME
+
+TIMER_UNIT = str(Path(INSTALL_SYSTEMD_DIR) / INSTALL_TIMER_NAME)
 
 
 def parse_interval_arg(value: str) -> int:

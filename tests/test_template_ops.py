@@ -38,7 +38,7 @@ def test_show_unknown_template(config_dir, capsys):
 
 
 def test_edit_copies_builtin_on_first_use(config_dir):
-    with patch("fim.template_ops.open_in_editor"):
+    with patch("common.template_ops.open_in_editor"):
         edit_template(config_dir, "email")
     override = Path(config_dir) / "templates" / "email_body.txt"
     assert override.exists()
@@ -49,7 +49,7 @@ def test_edit_does_not_overwrite_existing_override(config_dir):
     override_dir.mkdir()
     override_file = override_dir / "email_body.txt"
     override_file.write_text("CUSTOM CONTENT", encoding="utf-8")
-    with patch("fim.template_ops.open_in_editor"):
+    with patch("common.template_ops.open_in_editor"):
         edit_template(config_dir, "email")
     assert override_file.read_text(encoding="utf-8") == "CUSTOM CONTENT"
 
@@ -99,7 +99,7 @@ def test_edit_warns_on_missing_template_variable(config_dir, capsys):
         )
         return True  # match open_in_editor's bool contract
 
-    with patch("fim.template_ops.open_in_editor", side_effect=_write_bad):
+    with patch("common.template_ops.open_in_editor", side_effect=_write_bad):
         edit_template(config_dir, "email")
     assert "Warning" in capsys.readouterr().err
 
@@ -117,7 +117,7 @@ def test_edit_no_warning_when_variables_intact(config_dir, capsys):
         )
         return True  # match open_in_editor's bool contract
 
-    with patch("fim.template_ops.open_in_editor", side_effect=_write_good):
+    with patch("common.template_ops.open_in_editor", side_effect=_write_good):
         edit_template(config_dir, "email")
     assert "Warning" not in capsys.readouterr().err
 
@@ -129,14 +129,14 @@ def test_edit_prints_saved_when_file_changes(config_dir, capsys):
             encoding="utf-8",
         )
         return True  # match open_in_editor's bool contract
-    with patch("fim.template_ops.open_in_editor", side_effect=_modify):
+    with patch("common.template_ops.open_in_editor", side_effect=_modify):
         rc = edit_template(config_dir, "email")
     assert rc == 0
     assert "Template saved" in capsys.readouterr().out
 
 
 def test_edit_prints_no_changes_when_file_unchanged(config_dir, capsys):
-    with patch("fim.template_ops.open_in_editor"):   # no-op editor
+    with patch("common.template_ops.open_in_editor"):   # no-op editor
         rc = edit_template(config_dir, "email")
     assert rc == 0
     assert "No changes made" in capsys.readouterr().out
