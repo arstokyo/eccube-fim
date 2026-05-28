@@ -16,6 +16,7 @@ cat \
     lib/installer/lifecycle.sh \
     lib/installer/main.sh \
     > "$OUT"
+sed -i "s|%%SCRIPT_NAME%%|${OUT}|" "$OUT"
 
 chmod +x "$OUT"
 echo "Built $OUT ($(wc -l < "$OUT") lines)"
@@ -31,6 +32,7 @@ cat \
     lib/installer/malware.sh \
     lib/installer/malware_entry.sh \
     > "$MALWARE_OUT"
+sed -i "s|%%SCRIPT_NAME%%|${MALWARE_OUT}|" "$MALWARE_OUT"
 
 chmod +x "$MALWARE_OUT"
 echo "Built $MALWARE_OUT ($(wc -l < "$MALWARE_OUT") lines)"
