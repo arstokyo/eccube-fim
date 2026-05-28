@@ -11,3 +11,4 @@ INSTALL_STATUS_DIR    = "/var/lib/eccube-fim"
 INSTALL_STATUS_FILE   = "/var/lib/eccube-fim/status.json"
 # Presence of this file means eccube-malware is installed; used by FIM uninstall guard
 INSTALL_MALWARE_MARKER = "/var/lib/eccube-fim/malware-installed"
+FETCH_TIMEOUT          = 5   # seconds; used for all outbound HTTP requests to GitHub API

@@ -3,6 +3,7 @@ import socket
 import sys
 from pathlib import Path
 
+from common.notify_config import print_secrets_status as _print_secrets_status
 from fim.config import Config
 from fim.git import is_git_tracked
 from fim.notify import send_test_notification
@@ -24,18 +25,6 @@ def _print_targets_table(cfg: Config) -> bool:
     return all_ok
 
 
-def _print_secrets_status(cfg: Config) -> None:
-    if cfg.email.enabled:
-        pw_file = cfg.email.smtp_password_file
-        pw_ok = bool(pw_file) and Path(pw_file).exists()
-        print(f"Email recipients : {cfg.email.recipients or '(none)'}")
-        print(f"SMTP password    : {'found' if pw_ok else 'NOT FOUND'} ({pw_file})")
-    if cfg.slack.enabled:
-        for wh_file in cfg.slack.webhook_url_files:
-            wh_ok = Path(wh_file).exists()
-            print(f"Slack webhook    : {'found' if wh_ok else 'NOT FOUND'} ({wh_file})")
-
-
 def validate_config(cfg: Config) -> bool:
     """Print a validation report for all monitored files. Return True if all checks pass."""
     root = Path(cfg.root_path)
@@ -44,7 +33,7 @@ def validate_config(cfg: Config) -> bool:
     print()
     all_ok = _print_targets_table(cfg)
     print()
-    _print_secrets_status(cfg)
+    _print_secrets_status(cfg.email, cfg.slack)
     print()
     result = "PASSED" if all_ok else "FAILED — fix the issues above"
     print(f"Config validation {result}")

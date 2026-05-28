@@ -18,6 +18,7 @@ RELEASES_API="https://api.github.com/repos/${REPO_SLUG}/releases/latest"
 NONINTERACTIVE=0
 RECONFIGURE=0
 UPDATE=0
+FORCE=0
 VERSION=""          # set by _fetch_release_info()
 PYTHON_REQUIRES=""  # set by _fetch_release_info()
 SRC_DIR=""

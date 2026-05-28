@@ -1,5 +1,6 @@
 # known: ~220 lines — observe subsystem; no natural split boundary
 import os
+import re
 import subprocess
 import sys
 from datetime import datetime
@@ -10,8 +11,24 @@ from fim.db import Db
 from fim.utils import JST, LOG_DIR
 
 _LOG_PATH = LOG_DIR / "check.log"
-_STALE_SECS = 600     # heartbeat older than 10 min → STALE
-_WINDOW_SECS = 86400  # look-back window for "last error"
+_STALE_FALLBACK_SECS = 1800  # 2 × default 15-min interval; used when timer cannot be read
+_WINDOW_SECS = 86400         # look-back window for "last error"
+
+
+def _stale_threshold() -> int:
+    """Return 2 × timer interval in seconds. Falls back to _STALE_FALLBACK_SECS."""
+    try:
+        r = subprocess.run(
+            ["systemctl", "show", INSTALL_TIMER_NAME,
+             "--property=OnCalendarSpec", "--value"],
+            capture_output=True, text=True, check=False,
+        )
+        m = re.search(r"0/(\d+)", r.stdout.strip())
+        if m:
+            return int(m.group(1)) * 60 * 2
+    except OSError:
+        pass
+    return _STALE_FALLBACK_SECS
 
 
 # ── Format helpers ────────────────────────────────────────────────────────────
@@ -117,7 +134,7 @@ def _print_heartbeat(cfg: Config, now: datetime) -> None:
         mtime = os.path.getmtime(cfg.heartbeat_file)
         hb_dt = datetime.fromtimestamp(mtime, tz=JST)
         age = int(now.timestamp() - mtime)
-        health = "OK" if age < _STALE_SECS else "STALE"
+        health = "OK" if age < _stale_threshold() else "STALE"
         print(f"Heartbeat  : {hb_dt.strftime('%Y-%m-%d %H:%M:%S JST')}  ({fmt_age(age)})  {health}")
     except OSError:
         print("Heartbeat  : (not found — service may not have run yet)")

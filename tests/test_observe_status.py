@@ -76,8 +76,9 @@ def test_status_heartbeat_absent(cfg, capsys):
 
 
 def test_status_heartbeat_stale(cfg, capsys):
-    stale = datetime.now(JST).timestamp() - 700  # > 10 min
-    with patch("fim.observe.subprocess.run", side_effect=_systemctl_mock()):
+    stale = datetime.now(JST).timestamp() - 700  # older than threshold
+    with patch("fim.observe.subprocess.run", side_effect=_systemctl_mock()), \
+         patch("fim.observe._stale_threshold", return_value=600):
         with patch("os.path.getmtime", return_value=stale):
             observe.status(cfg)
     assert "STALE" in capsys.readouterr().out

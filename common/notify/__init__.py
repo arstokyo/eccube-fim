@@ -15,14 +15,16 @@ class NotifyConfigLike(Protocol):
     slack: NotifySlack
 
 
+# Registry: (predicate, factory). To add a channel: append one tuple here.
+_REGISTRY = [
+    (lambda cfg: cfg.email.enabled, lambda cfg: EmailChannel(cfg.email)),
+    (lambda cfg: cfg.slack.enabled, lambda cfg: SlackChannel(cfg.slack)),
+]
+
+
 def build_channels(cfg: NotifyConfigLike) -> list[Channel]:
     """Build all enabled channels from config. Works with Config and MalwareConfig."""
-    channels: list[Channel] = []
-    if cfg.email.enabled:
-        channels.append(EmailChannel(cfg.email))
-    if cfg.slack.enabled:
-        channels.append(SlackChannel(cfg.slack))
-    return channels
+    return [factory(cfg) for enabled, factory in _REGISTRY if enabled(cfg)]
 
 
 def send_safe(channel: Channel, notification: RenderedNotification) -> bool:

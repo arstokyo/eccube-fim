@@ -14,12 +14,17 @@ parse_args() {
             --non-interactive) NONINTERACTIVE=1 ;;
             --reconfigure)     RECONFIGURE=1 ;;
             --update)          UPDATE=1 ;;
+            --force)           FORCE=1 ;;
             *) error "Unknown argument: $1"; exit 1 ;;
         esac
         shift
     done
     if [ "$UPDATE" -eq 1 ] && [ "$RECONFIGURE" -eq 1 ]; then
         error "--update and --reconfigure are mutually exclusive"; exit 1
+    fi
+    # --force is a retry path after a failed --update; meaningless without --update
+    if [ "$FORCE" -eq 1 ] && [ "$UPDATE" -eq 0 ]; then
+        error "--force requires --update (use: sudo bash install.sh --update --force)"; exit 1
     fi
 }
 

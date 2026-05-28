@@ -1,6 +1,8 @@
 import re
+import string
 import sys
 from pathlib import Path
+from typing import Optional
 
 
 def user_template_dir(config_dir: str) -> Path:
@@ -39,3 +41,13 @@ def validate_template_vars(path: Path, name: str,
             f"{missing_str} — the next {cycle} cycle may fail to render.",
             file=sys.stderr,
         )
+
+
+def load_template(name: str, builtin_dir: Path,
+                  config_dir: Optional[str] = None) -> string.Template:
+    """Return a Template from a user override if present, else from builtin_dir."""
+    if config_dir is not None:
+        candidate = Path(config_dir) / "templates" / name
+        if candidate.exists():
+            return string.Template(candidate.read_text(encoding="utf-8"))
+    return string.Template((builtin_dir / name).read_text(encoding="utf-8"))

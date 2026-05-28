@@ -210,8 +210,8 @@ def test_migrate_only_calls_run_migrations(tmp_path):
 
     with patch("fim.upgrade._require_root", return_value=True), \
          patch("fim.upgrade._run_migrations", return_value=2) as mock_mig, \
-         patch("fim.upgrade._fetch_release_info", return_value=("v1.0.0", "")), \
-         patch("fim.upgrade._write_version_stamp") as mock_stamp, \
+         patch("common.upgrade.fetch_release_info", return_value=("v1.0.0", "")), \
+         patch("common.upgrade.write_version_stamp") as mock_stamp, \
          patch("fim.upgrade._download_tarball") as mock_dl:
         rc = upgrade(migrate_only=True, config_dir=config_dir)
 

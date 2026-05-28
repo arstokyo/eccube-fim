@@ -1,8 +1,8 @@
-import string
 from datetime import datetime
 from pathlib import Path
 from typing import Callable, Optional
 
+from common.template_ops import load_template as _load_template
 from fim.detection import Detection
 from fim.utils import JST
 
@@ -15,20 +15,12 @@ TEMPLATE_NAMES: dict[str, str] = {
 }
 
 
-def _load(name: str, config_dir: Optional[str] = None) -> string.Template:
-    if config_dir is not None:
-        candidate = Path(config_dir) / "templates" / name
-        if candidate.exists():
-            return string.Template(candidate.read_text(encoding="utf-8"))
-    return string.Template((BUILTIN_TEMPLATE_DIR / name).read_text(encoding="utf-8"))
-
-
 def _render_body(template_name: str, hostname: str, detections: list[Detection],
                  block_fmt: Callable[[Detection], str],
                  config_dir: Optional[str] = None) -> str:
     now_str = datetime.now(JST).strftime("%Y-%m-%d %H:%M:%S")
     file_blocks = "\n\n".join(block_fmt(d) for d in detections)
-    return _load(template_name, config_dir).substitute(
+    return _load_template(template_name, BUILTIN_TEMPLATE_DIR, config_dir).substitute(
         detected_at=now_str,
         hostname=hostname,
         file_count=len(detections),
@@ -38,7 +30,7 @@ def _render_body(template_name: str, hostname: str, detections: list[Detection],
 
 def render_subject(hostname: str, config_dir: Optional[str] = None) -> str:
     """Render the alert email subject line."""
-    return _load(TEMPLATE_NAMES["subject"], config_dir).substitute(hostname=hostname).strip()
+    return _load_template(TEMPLATE_NAMES["subject"], BUILTIN_TEMPLATE_DIR, config_dir).substitute(hostname=hostname).strip()
 
 
 def render_email_body(hostname: str, detections: list[Detection],

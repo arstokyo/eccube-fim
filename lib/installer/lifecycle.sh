@@ -1,4 +1,25 @@
 # ---------------------------------------------------------------------------
+# Force-retry mode — run migrations only; code already installed on disk
+# ---------------------------------------------------------------------------
+migrate_only_mode() {
+    # Retry path after a failed --update: skip re-download and jump straight to migrations.
+    local daemon_f="$CONFIG_DIR/daemon.yaml"
+    [ -f "$daemon_f" ] || { error "No config found — run without --update for a fresh install"; exit 1; }
+    info "Force-retry: running migrations only (code already installed)"
+    "$SBIN_DIR/eccube-fim" _migrate --config-dir "$CONFIG_DIR" || {
+        error "Migrations still failing — fix the error above, then retry."
+        error "Manual path: $SBIN_DIR/eccube-fim _migrate --config-dir $CONFIG_DIR"
+        exit 1
+    }
+    install_version_stamp
+    ECCUBE_ROOT=$(awk '/^root_path:/{print $2}' "$daemon_f")
+    _read_interval_from_timer
+    install_systemd_files
+    systemctl restart eccube-fim-check.timer
+    info "Force-retry complete"
+}
+
+# ---------------------------------------------------------------------------
 # Update mode — refresh code + units, preserve config
 # ---------------------------------------------------------------------------
 update_mode() {

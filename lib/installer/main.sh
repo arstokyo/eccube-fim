@@ -7,6 +7,13 @@ main() {
     require_root
     configure_os
 
+    if [ "$UPDATE" -eq 1 ] && [ "$FORCE" -eq 1 ]; then
+        fetch_source
+        migrate_only_mode
+        info "Update complete"
+        return
+    fi
+
     if [ "$UPDATE" -eq 1 ]; then
         fetch_source
         info "EC-CUBE FIM installer (version: ${VERSION}, OS: ${OS_ID})"

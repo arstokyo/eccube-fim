@@ -11,6 +11,7 @@ from common.upgrade import (
     find_extracted_root as _find_extracted_root,
     write_version_stamp as _write_version_stamp,
     confirm_co_upgrade as _confirm_co_upgrade,
+    migrate_only as _migrate_only_impl,
 )
 from fim.config import INSTALL_SBIN_DIR, INSTALL_LIB_DIR, DEFAULT_CONFIG_DIR
 from fim.lifecycle import _require_root
@@ -55,30 +56,7 @@ def _run_malware_migrations(config_dir: str) -> int:
 
 
 def _migrate_only(config_dir: str) -> int:
-    """Run pending migrations and update version stamp; skip code download."""
-    print("Running pending migrations...")
-    try:
-        count = _run_migrations(config_dir)
-    except RuntimeError as e:
-        print(f"Error: {e}", file=sys.stderr)
-        print(
-            "Fix the error above, then retry: eccube-fim upgrade --migrate-only",
-            file=sys.stderr,
-        )
-        return 1
-    if count:
-        print(f"Applied {count} migration(s).")
-    else:
-        print("No pending migrations.")
-    try:
-        version, _ = _fetch_release_info()
-        _write_version_stamp(config_dir, version)
-    except RuntimeError:
-        # leave stamp unchanged — next upgrade run will find no pending migrations
-        # and exit cleanly without re-downloading
-        pass
-    print("Migration retry complete.")
-    return 0
+    return _migrate_only_impl(config_dir, "eccube-fim", _run_migrations)
 
 
 def _install_release(version: str, yes: bool, config_dir: str) -> int:

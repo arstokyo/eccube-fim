@@ -18,6 +18,7 @@ RELEASES_API="https://api.github.com/repos/${REPO_SLUG}/releases/latest"
 NONINTERACTIVE=0
 RECONFIGURE=0
 UPDATE=0
+FORCE=0
 VERSION=""          # set by _fetch_release_info()
 PYTHON_REQUIRES=""  # set by _fetch_release_info()
 SRC_DIR=""
@@ -38,12 +39,17 @@ parse_args() {
             --non-interactive) NONINTERACTIVE=1 ;;
             --reconfigure)     RECONFIGURE=1 ;;
             --update)          UPDATE=1 ;;
+            --force)           FORCE=1 ;;
             *) error "Unknown argument: $1"; exit 1 ;;
         esac
         shift
     done
     if [ "$UPDATE" -eq 1 ] && [ "$RECONFIGURE" -eq 1 ]; then
         error "--update and --reconfigure are mutually exclusive"; exit 1
+    fi
+    # --force is a retry path after a failed --update; meaningless without --update
+    if [ "$FORCE" -eq 1 ] && [ "$UPDATE" -eq 0 ]; then
+        error "--force requires --update (use: sudo bash install.sh --update --force)"; exit 1
     fi
 }
 
@@ -681,6 +687,27 @@ activate_systemd_units() {
 }
 
 # ---------------------------------------------------------------------------
+# Force-retry mode — run migrations only; code already installed on disk
+# ---------------------------------------------------------------------------
+migrate_only_mode() {
+    # Retry path after a failed --update: skip re-download and jump straight to migrations.
+    local daemon_f="$CONFIG_DIR/daemon.yaml"
+    [ -f "$daemon_f" ] || { error "No config found — run without --update for a fresh install"; exit 1; }
+    info "Force-retry: running migrations only (code already installed)"
+    "$SBIN_DIR/eccube-fim" _migrate --config-dir "$CONFIG_DIR" || {
+        error "Migrations still failing — fix the error above, then retry."
+        error "Manual path: $SBIN_DIR/eccube-fim _migrate --config-dir $CONFIG_DIR"
+        exit 1
+    }
+    install_version_stamp
+    ECCUBE_ROOT=$(awk '/^root_path:/{print $2}' "$daemon_f")
+    _read_interval_from_timer
+    install_systemd_files
+    systemctl restart eccube-fim-check.timer
+    info "Force-retry complete"
+}
+
+# ---------------------------------------------------------------------------
 # Update mode — refresh code + units, preserve config
 # ---------------------------------------------------------------------------
 update_mode() {
@@ -766,6 +793,13 @@ main() {
     parse_args "$@"
     require_root
     configure_os
+
+    if [ "$UPDATE" -eq 1 ] && [ "$FORCE" -eq 1 ]; then
+        fetch_source
+        migrate_only_mode
+        info "Update complete"
+        return
+    fi
 
     if [ "$UPDATE" -eq 1 ]; then
         fetch_source

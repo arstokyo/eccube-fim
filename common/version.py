@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from common.constants import DEFAULT_CONFIG_DIR
+from common.constants import DEFAULT_CONFIG_DIR, FETCH_TIMEOUT as _FETCH_TIMEOUT
 
 __version__        = "dev"
 REPO_SLUG          = "arstokyo/eccube-fim"
@@ -14,7 +14,6 @@ VERSION_CHECK_URL  = f"https://api.github.com/repos/{REPO_SLUG}/releases/latest"
 COMMON_API_VERSION = 1   # bump when common/ API breaks backward compatibility
 
 _CHECK_INTERVAL_HOURS = 24
-_FETCH_TIMEOUT        = 5
 
 
 def read_installed_version(config_dir: str = DEFAULT_CONFIG_DIR) -> str:

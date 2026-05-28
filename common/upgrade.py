@@ -6,10 +6,10 @@ import sys
 import tarfile
 import urllib.request
 from pathlib import Path
+from typing import Callable
 
+from common.constants import FETCH_TIMEOUT as _FETCH_TIMEOUT
 from common.version import REPO_SLUG, VERSION_CHECK_URL
-
-_FETCH_TIMEOUT = 5
 
 
 def fetch_release_info() -> tuple[str, str]:
@@ -80,6 +80,31 @@ def find_extracted_root(dest_dir: str) -> str:
 
 def write_version_stamp(config_dir: str, version: str) -> None:
     (Path(config_dir) / ".version").write_text(version.lstrip("v") + "\n", encoding="utf-8")
+
+
+def migrate_only(config_dir: str, cli_name: str,
+                 run_migrations: Callable[[str], int]) -> int:
+    """Run pending migrations and update version stamp. Return 0 on success.
+
+    run_migrations: tool-specific function that applies pending migrations.
+    cli_name: used in the retry hint printed on failure.
+    """
+    print("Running pending migrations...")
+    try:
+        count = run_migrations(config_dir)
+    except RuntimeError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        print(f"Fix the error above, then retry: {cli_name} upgrade --migrate-only",
+              file=sys.stderr)
+        return 1
+    print(f"Applied {count} migration(s)." if count else "No pending migrations.")
+    try:
+        version, _ = fetch_release_info()
+        write_version_stamp(config_dir, version)
+    except RuntimeError:
+        # leave stamp unchanged — next upgrade run will find no pending migrations
+        pass
+    return 0
 
 
 def confirm_co_upgrade(tool_name: str, companion: str, version: str, yes: bool) -> bool:
