@@ -3,6 +3,8 @@ from pathlib import Path
 
 import yaml
 
+from common.constants import DEFAULT_CONFIG_DIR
+
 
 def setup_notify_interactive(config_dir: str) -> int:
     """Prompt the user to configure email / Slack in notify.yaml.
@@ -43,7 +45,7 @@ def _prompt_email(current: dict) -> dict:
         "smtp_user":          _ask("SMTP user (blank = no auth)", current.get("smtp_user", "")),
         "smtp_password_file": _ask("SMTP password file",
                                    current.get("smtp_password_file",
-                                               "/etc/eccube-fim/smtp.password")),
+                                               f"{DEFAULT_CONFIG_DIR}/smtp.password")),
         "from":               _ask("From address", current.get("from", "")),
         "recipients":         [_ask("To address",
                                     (current.get("recipients") or [""])[0])],
@@ -54,7 +56,7 @@ def _prompt_slack(current: dict) -> dict:
     enabled = _yes_no("Enable Slack notifications?", current.get("enabled", False))
     if not enabled:
         return {"enabled": False}
-    existing_files = current.get("webhook_url_files") or ["/etc/eccube-fim/slack.webhook"]
+    existing_files = current.get("webhook_url_files") or [f"{DEFAULT_CONFIG_DIR}/slack.webhook"]
     return {
         "enabled":           True,
         "webhook_url_files": [_ask("Webhook URL file path", existing_files[0])],

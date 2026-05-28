@@ -41,6 +41,8 @@ def validate_config(cfg: Config) -> bool:
 
 
 def send_test_mail(cfg: Config) -> int:
+    # known: near-duplicate of malware/validate.send_test_mail — dispatch path differs;
+    # FIM uses send_test_notification() which builds a Detection; malware builds RenderedNotification directly
     """Send a test email using the configured SMTP settings. Return 0 on success."""
     if not cfg.email.enabled:
         print("Email is disabled in notify.yaml — nothing to test.", file=sys.stderr)
@@ -61,6 +63,7 @@ def send_test_mail(cfg: Config) -> int:
 
 
 def send_test_slack(cfg: Config) -> int:
+    # known: near-duplicate of malware/validate.send_test_slack — same dispatch difference as send_test_mail
     """Send a test Slack message using the configured webhook. Return 0 on success."""
     if not cfg.slack.enabled:
         print("Slack is disabled in notify.yaml — nothing to test.", file=sys.stderr)
