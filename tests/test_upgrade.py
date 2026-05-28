@@ -1,4 +1,5 @@
 import json
+import os
 import pytest
 from contextlib import ExitStack
 from unittest.mock import patch, MagicMock
@@ -240,3 +241,203 @@ def test_migrate_only_no_network_leaves_stamp_unchanged(tmp_path):
         rc = upgrade(migrate_only=True, config_dir=config_dir)
     assert rc == 0
     mock_stamp.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# _install_release copies both fim/ and common/
+# ---------------------------------------------------------------------------
+
+def test_install_release_copies_fim_and_common(monkeypatch, tmp_path):
+    """Both fim/ and common/ must be copied from the tarball."""
+    from fim.upgrade import _install_release
+
+    src = tmp_path / "src"
+    (src / "fim").mkdir(parents=True)
+    (src / "common").mkdir()
+    (src / "bin").mkdir()
+    (src / "bin" / "eccube-fim").write_text("#!/bin/sh", encoding="utf-8")
+
+    copied_dirs: list[str] = []
+
+    def fake_copytree(src_path: str, dst_path: str) -> None:
+        copied_dirs.append(os.path.basename(src_path))
+
+    monkeypatch.setattr("fim.upgrade.INSTALL_LIB_DIR", str(tmp_path / "lib"))
+    monkeypatch.setattr("fim.upgrade.INSTALL_SBIN_DIR", str(tmp_path / "sbin"))
+
+    with patch("fim.upgrade._download_tarball"), \
+         patch("fim.upgrade._find_extracted_root", return_value=str(src)), \
+         patch("fim.upgrade._run_migrations", return_value=0), \
+         patch("fim.upgrade._write_version_stamp"), \
+         patch("shutil.rmtree"), \
+         patch("shutil.copytree", side_effect=fake_copytree), \
+         patch("shutil.copy2"), \
+         patch("os.chmod"):
+        rc = _install_release("v1.1.0", yes=True, config_dir=str(tmp_path))
+
+    assert rc == 0
+    assert "fim" in copied_dirs, "fim/ must be copied"
+    assert "common" in copied_dirs, "common/ must be copied"
+
+
+def test_install_release_prompt_mentions_common(monkeypatch, tmp_path, capsys):
+    """Confirmation prompt must name common/ so the user knows what changes."""
+    from fim.upgrade import _install_release
+
+    src = tmp_path / "src"
+    (src / "fim").mkdir(parents=True)
+    (src / "common").mkdir()
+    (src / "bin").mkdir()
+    (src / "bin" / "eccube-fim").write_text("#!/bin/sh", encoding="utf-8")
+
+    monkeypatch.setattr("fim.upgrade.INSTALL_LIB_DIR", str(tmp_path / "lib"))
+    monkeypatch.setattr("fim.upgrade.INSTALL_SBIN_DIR", str(tmp_path / "sbin"))
+
+    with patch("fim.upgrade._download_tarball"), \
+         patch("fim.upgrade._find_extracted_root", return_value=str(src)), \
+         patch("fim.upgrade._run_migrations", return_value=0), \
+         patch("fim.upgrade._write_version_stamp"), \
+         patch("shutil.rmtree"), \
+         patch("shutil.copytree"), \
+         patch("shutil.copy2"), \
+         patch("os.chmod"):
+        _install_release("v1.1.0", yes=True, config_dir=str(tmp_path))
+
+    out = capsys.readouterr().out
+    assert "common" in out, "Prompt must mention common/"
+
+
+# ---------------------------------------------------------------------------
+# co-install: fim upgrade also replaces malware/ when co-installed
+# ---------------------------------------------------------------------------
+
+def test_install_release_co_install_copies_malware(monkeypatch, tmp_path):
+    """When malware/ exists under INSTALL_LIB_DIR, fim upgrade copies it too."""
+    from fim.upgrade import _install_release
+
+    src = tmp_path / "src"
+    for d in ("fim", "common", "malware", "bin"):
+        (src / d).mkdir(parents=True)
+    (src / "bin" / "eccube-fim").write_text("#!/bin/sh")
+    (src / "bin" / "eccube-malware").write_text("#!/bin/sh")
+
+    lib_dir = tmp_path / "lib"
+    (lib_dir / "malware").mkdir(parents=True)  # companion is installed
+
+    copied_dirs: list[str] = []
+
+    def fake_copytree(src_path: str, dst_path: str) -> None:
+        copied_dirs.append(os.path.basename(src_path))
+
+    monkeypatch.setattr("fim.upgrade.INSTALL_LIB_DIR", str(lib_dir))
+    monkeypatch.setattr("fim.upgrade.INSTALL_SBIN_DIR", str(tmp_path / "sbin"))
+    monkeypatch.setattr("fim.upgrade._MALWARE_BIN", str(tmp_path / "sbin" / "eccube-malware"))
+
+    with patch("fim.upgrade._download_tarball"), \
+         patch("fim.upgrade._find_extracted_root", return_value=str(src)), \
+         patch("fim.upgrade._run_migrations", return_value=0), \
+         patch("fim.upgrade._run_malware_migrations", return_value=0), \
+         patch("fim.upgrade._write_version_stamp"), \
+         patch("shutil.rmtree"), \
+         patch("shutil.copytree", side_effect=fake_copytree), \
+         patch("shutil.copy2"), \
+         patch("os.chmod"):
+        rc = _install_release("v1.1.0", yes=True, config_dir=str(tmp_path))
+
+    assert rc == 0
+    assert "malware" in copied_dirs, "malware/ must be copied when co-installed"
+
+
+def test_install_release_no_co_install_skips_malware(monkeypatch, tmp_path):
+    """When malware/ does not exist, fim upgrade must NOT copy malware/."""
+    from fim.upgrade import _install_release
+
+    src = tmp_path / "src"
+    for d in ("fim", "common", "bin"):
+        (src / d).mkdir(parents=True)
+    (src / "bin" / "eccube-fim").write_text("#!/bin/sh")
+
+    lib_dir = tmp_path / "lib"
+    lib_dir.mkdir()  # no malware/ subdir — companion not installed
+
+    copied_dirs: list[str] = []
+
+    def fake_copytree(src_path: str, dst_path: str) -> None:
+        copied_dirs.append(os.path.basename(src_path))
+
+    monkeypatch.setattr("fim.upgrade.INSTALL_LIB_DIR", str(lib_dir))
+    monkeypatch.setattr("fim.upgrade.INSTALL_SBIN_DIR", str(tmp_path / "sbin"))
+
+    with patch("fim.upgrade._download_tarball"), \
+         patch("fim.upgrade._find_extracted_root", return_value=str(src)), \
+         patch("fim.upgrade._run_migrations", return_value=0), \
+         patch("fim.upgrade._write_version_stamp"), \
+         patch("shutil.rmtree"), \
+         patch("shutil.copytree", side_effect=fake_copytree), \
+         patch("shutil.copy2"), \
+         patch("os.chmod"):
+        rc = _install_release("v1.1.0", yes=True, config_dir=str(tmp_path))
+
+    assert rc == 0
+    assert "malware" not in copied_dirs, "malware/ must NOT be copied for single-tool install"
+
+
+def test_install_release_co_install_prompt_mentions_malware(monkeypatch, tmp_path, capsys):
+    """Confirmation prompt mentions malware/ when co-installed."""
+    from fim.upgrade import _install_release
+
+    src = tmp_path / "src"
+    for d in ("fim", "common", "malware", "bin"):
+        (src / d).mkdir(parents=True)
+    (src / "bin" / "eccube-fim").write_text("#!/bin/sh")
+    (src / "bin" / "eccube-malware").write_text("#!/bin/sh")
+
+    lib_dir = tmp_path / "lib"
+    (lib_dir / "malware").mkdir(parents=True)
+
+    monkeypatch.setattr("fim.upgrade.INSTALL_LIB_DIR", str(lib_dir))
+    monkeypatch.setattr("fim.upgrade.INSTALL_SBIN_DIR", str(tmp_path / "sbin"))
+    monkeypatch.setattr("fim.upgrade._MALWARE_BIN", str(tmp_path / "sbin" / "eccube-malware"))
+
+    with patch("fim.upgrade._download_tarball"), \
+         patch("fim.upgrade._find_extracted_root", return_value=str(src)), \
+         patch("fim.upgrade._run_migrations", return_value=0), \
+         patch("fim.upgrade._run_malware_migrations", return_value=0), \
+         patch("fim.upgrade._write_version_stamp"), \
+         patch("shutil.rmtree"), \
+         patch("shutil.copytree"), \
+         patch("shutil.copy2"), \
+         patch("os.chmod"):
+        _install_release("v1.1.0", yes=True, config_dir=str(tmp_path))
+
+    out = capsys.readouterr().out
+    assert "malware" in out, "Prompt must mention malware/ for co-install"
+
+
+def test_install_release_single_install_prompt_omits_malware(monkeypatch, tmp_path, capsys):
+    """Confirmation prompt does NOT mention malware/ for single-tool install."""
+    from fim.upgrade import _install_release
+
+    src = tmp_path / "src"
+    for d in ("fim", "common", "bin"):
+        (src / d).mkdir(parents=True)
+    (src / "bin" / "eccube-fim").write_text("#!/bin/sh")
+
+    lib_dir = tmp_path / "lib"
+    lib_dir.mkdir()  # no malware/ subdir
+
+    monkeypatch.setattr("fim.upgrade.INSTALL_LIB_DIR", str(lib_dir))
+    monkeypatch.setattr("fim.upgrade.INSTALL_SBIN_DIR", str(tmp_path / "sbin"))
+
+    with patch("fim.upgrade._download_tarball"), \
+         patch("fim.upgrade._find_extracted_root", return_value=str(src)), \
+         patch("fim.upgrade._run_migrations", return_value=0), \
+         patch("fim.upgrade._write_version_stamp"), \
+         patch("shutil.rmtree"), \
+         patch("shutil.copytree"), \
+         patch("shutil.copy2"), \
+         patch("os.chmod"):
+        _install_release("v1.1.0", yes=True, config_dir=str(tmp_path))
+
+    out = capsys.readouterr().out
+    assert "malware" not in out, "Prompt must NOT mention malware/ for single-tool install"

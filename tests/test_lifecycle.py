@@ -102,6 +102,8 @@ def test_upgrade_replaces_files(monkeypatch, tmp_path):
     (fake_src / "fim").mkdir(parents=True)
     (fake_src / "fim" / "cli.py").write_text("# updated")
     (fake_src / "fim" / "version.py").write_text('__version__ = "dev"\n')
+    (fake_src / "common").mkdir()
+    (fake_src / "common" / "version.py").write_text('__version__ = "dev"\n')
     (fake_src / "bin").mkdir()
     (fake_src / "bin" / "eccube-fim").write_text("#!/usr/bin/env python3\n")
 

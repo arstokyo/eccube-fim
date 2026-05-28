@@ -15,20 +15,46 @@ from fim.config import INSTALL_SBIN_DIR, INSTALL_LIB_DIR, DEFAULT_CONFIG_DIR
 from fim.lifecycle import _require_root
 from fim.version import read_installed_version
 
+# known: duplicate of malware/lifecycle._MALWARE_BIN — cannot import across boundary (ARCH-017)
+_MALWARE_BIN = "/usr/local/sbin/eccube-malware"
+
 
 def _run_migrations(config_dir: str) -> int:
-    # deferred import — in production the lib has just been replaced on disk,
-    # so importing here loads the new fim/migration.py rather than a cached pre-upgrade version
+    # deferred import — loads new fim/migration.py after disk replacement
     import fim.migration as _m
     return _m.run_migrations(config_dir)
 
 
-def _migrate_only(config_dir: str) -> int:
-    """Run pending migrations and update the version stamp. No download.
+def _malware_installed() -> bool:
+    return os.path.isdir(os.path.join(INSTALL_LIB_DIR, "malware"))
 
-    Return 0 on success, 1 if migrations fail. Used for upgrade retries
-    when code is already in place but state.db migration was interrupted.
-    """
+
+def _replace_fim_libraries(src: str) -> None:
+    shutil.rmtree(os.path.join(INSTALL_LIB_DIR, "fim"), ignore_errors=True)
+    shutil.copytree(os.path.join(src, "fim"), os.path.join(INSTALL_LIB_DIR, "fim"))
+    shutil.rmtree(os.path.join(INSTALL_LIB_DIR, "common"), ignore_errors=True)
+    shutil.copytree(os.path.join(src, "common"), os.path.join(INSTALL_LIB_DIR, "common"))
+
+
+def _replace_malware_companion(src: str) -> None:
+    shutil.rmtree(os.path.join(INSTALL_LIB_DIR, "malware"), ignore_errors=True)
+    shutil.copytree(os.path.join(src, "malware"), os.path.join(INSTALL_LIB_DIR, "malware"))
+    shutil.copy2(os.path.join(src, "bin", "eccube-malware"), _MALWARE_BIN)
+    os.chmod(_MALWARE_BIN, 0o755)
+
+
+def _run_malware_migrations(config_dir: str) -> int:
+    # deferred import — loads new common/migration after disk replacement
+    from common.migration import MigrationRunner
+    return MigrationRunner(
+        db_path=str(Path(config_dir) / "malware_state.db"),  # installation convention for malware's state
+        migrations_dir=str(Path(INSTALL_LIB_DIR) / "malware" / "migrations"),
+        config_dir=config_dir,
+    ).run()
+
+
+def _migrate_only(config_dir: str) -> int:
+    """Run pending migrations and update version stamp; skip code download."""
     print("Running pending migrations...")
     try:
         count = _run_migrations(config_dir)
@@ -55,13 +81,12 @@ def _migrate_only(config_dir: str) -> int:
 
 
 def _install_release(version: str, yes: bool, config_dir: str) -> int:
-    """Prompt for confirmation, download `version`, replace library + binary.
-
-    Return 0 on success, 1 if the user cancels or migrations fail.
-    """
-    # known: sequential install steps; splitting would require passing version+config_dir as state
+    """Prompt, download `version`, and replace library + binary. Return 0 ok, 1 on failure."""
+    co_install = _malware_installed()
+    companion_note = f"  {INSTALL_LIB_DIR}/malware  {_MALWARE_BIN}" if co_install else ""
     print(f"Latest version : {version}")
-    print(f"Will replace   : {INSTALL_LIB_DIR}/fim  and  {INSTALL_SBIN_DIR}/eccube-fim")
+    print(f"Will replace   : {INSTALL_LIB_DIR}/fim  {INSTALL_LIB_DIR}/common  "
+          f"{INSTALL_SBIN_DIR}/eccube-fim{companion_note}")
     if not yes:
         answer = input("Proceed with upgrade? [y/N]: ").strip().lower()
         if answer != "y":
@@ -72,14 +97,19 @@ def _install_release(version: str, yes: bool, config_dir: str) -> int:
         _download_tarball(version, tmp)
         src = _find_extracted_root(tmp)
         print("Replacing library...")
-        shutil.rmtree(os.path.join(INSTALL_LIB_DIR, "fim"), ignore_errors=True)
-        shutil.copytree(os.path.join(src, "fim"),
-                        os.path.join(INSTALL_LIB_DIR, "fim"))
+        _replace_fim_libraries(src)
+        if co_install:
+            print("Co-install detected — also replacing malware/...")
+            _replace_malware_companion(src)
         print("Running migrations...")
         try:
             count = _run_migrations(config_dir)
             if count:
                 print(f"Applied {count} migration(s).")
+            if co_install:
+                mc = _run_malware_migrations(config_dir)
+                if mc:
+                    print(f"Applied {mc} malware migration(s).")
         except RuntimeError as e:
             print(f"Error: {e}", file=sys.stderr)
             print(
@@ -99,11 +129,7 @@ def _install_release(version: str, yes: bool, config_dir: str) -> int:
 
 def upgrade(yes: bool = False, force: bool = False, migrate_only: bool = False,
             config_dir: str = DEFAULT_CONFIG_DIR) -> int:
-    """Download the latest release and replace library + CLI binary.
-
-    Return 0 on success, 1 on network/API error. Raises SystemExit(1)
-    if the release requires a newer Python than the running interpreter.
-    """
+    """Download latest release and replace library + binary. Raises SystemExit(1) on Python mismatch."""
     if not _require_root():
         return 1
     if migrate_only:
