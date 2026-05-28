@@ -10,6 +10,7 @@ from common.upgrade import (
     download_tarball as _download_tarball,
     find_extracted_root as _find_extracted_root,
     write_version_stamp as _write_version_stamp,
+    confirm_co_upgrade as _confirm_co_upgrade,
 )
 from fim.config import INSTALL_SBIN_DIR, INSTALL_LIB_DIR, DEFAULT_CONFIG_DIR
 from fim.lifecycle import _require_root
@@ -78,17 +79,6 @@ def _migrate_only(config_dir: str) -> int:
         pass
     print("Migration retry complete.")
     return 0
-
-
-def _confirm_co_upgrade(tool_name: str, companion: str, version: str, yes: bool) -> bool:
-    if yes:
-        return True
-    print("Co-install detected:")
-    print(f"  - {tool_name} will be upgraded to {version}")
-    print(f"  - {companion} will also be upgraded to {version}")
-    print(f"  - shared eccube-common will be upgraded to {version}")
-    answer = input(f"Co-upgrade {companion} too? [y/N]: ").strip().lower()
-    return answer == "y"
 
 
 def _install_release(version: str, yes: bool, config_dir: str) -> int:

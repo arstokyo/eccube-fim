@@ -9,6 +9,9 @@ from fim.exceptions import FimConfigError
 _VALID_FILES = {"daemon", "targets", "notify"}
 
 
+# known: near-duplicate of malware/editor.edit_config_file — differs by _VALID_FILES set,
+# cycle name ("check" vs "scan"), and config reload/validate types; callback extraction
+# would require passing load_fn + validate_fn with no clarity gain
 def edit_config_file(config_dir: str, which: str) -> int:
     """Open one of daemon/targets/notify YAML in $EDITOR; validate after save.
 

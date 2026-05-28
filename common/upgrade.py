@@ -80,3 +80,14 @@ def find_extracted_root(dest_dir: str) -> str:
 
 def write_version_stamp(config_dir: str, version: str) -> None:
     (Path(config_dir) / ".version").write_text(version.lstrip("v") + "\n", encoding="utf-8")
+
+
+def confirm_co_upgrade(tool_name: str, companion: str, version: str, yes: bool) -> bool:
+    if yes:
+        return True
+    print("Co-install detected:")
+    print(f"  - {tool_name} will be upgraded to {version}")
+    print(f"  - {companion} will also be upgraded to {version}")
+    print(f"  - shared eccube-common will be upgraded to {version}")
+    answer = input(f"Co-upgrade {companion} too? [y/N]: ").strip().lower()
+    return answer == "y"
