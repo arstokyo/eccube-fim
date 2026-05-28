@@ -4,7 +4,9 @@
 update_mode() {
     local daemon_f="$CONFIG_DIR/daemon.yaml"
     [ -f "$daemon_f" ] || { error "No config found — run without --update for a fresh install"; exit 1; }
-    install_library
+    guard_existing_malware_version
+    install_common_library
+    install_fim_library
     install_cli
     install_logrotate
     # run after new lib + binary are in place so new migration files are used

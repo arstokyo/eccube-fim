@@ -441,3 +441,53 @@ def test_install_release_single_install_prompt_omits_malware(monkeypatch, tmp_pa
 
     out = capsys.readouterr().out
     assert "malware" not in out, "Prompt must NOT mention malware/ for single-tool install"
+
+
+# ---------------------------------------------------------------------------
+# co-upgrade prompt: operator must confirm before companion is replaced
+# ---------------------------------------------------------------------------
+
+def test_fim_upgrade_co_install_prompts_before_companion_upgrade(monkeypatch, tmp_path, capsys):
+    """When malware is installed and the operator answers 'n', upgrade cancels before download."""
+    (tmp_path / ".version").write_text("1.1.0\n")
+    monkeypatch.setattr("os.geteuid", lambda: 0)
+    monkeypatch.setattr("fim.upgrade.INSTALL_LIB_DIR", str(tmp_path / "lib"))
+    (tmp_path / "lib" / "malware").mkdir(parents=True)  # simulate co-install
+
+    with patch("fim.upgrade._fetch_release_info", return_value=("v1.2.0", "")), \
+         patch("fim.upgrade._download_tarball") as mock_dl, \
+         patch("builtins.input", return_value="n"):
+        result = upgrade(yes=False, config_dir=str(tmp_path))
+
+    assert result == 1
+    mock_dl.assert_not_called()
+    out = capsys.readouterr().out
+    assert "Co-install detected" in out
+    assert "Cancelled" in out
+
+
+def test_fim_upgrade_yes_allows_co_upgrade_without_prompt(monkeypatch, tmp_path):
+    """When --yes is passed for co-install, upgrade proceeds without prompting."""
+    (tmp_path / ".version").write_text("1.1.0\n")
+    monkeypatch.setattr("os.geteuid", lambda: 0)
+    lib_dir = tmp_path / "lib"
+    (lib_dir / "malware").mkdir(parents=True)
+    monkeypatch.setattr("fim.upgrade.INSTALL_LIB_DIR", str(lib_dir))
+    monkeypatch.setattr("fim.upgrade.INSTALL_SBIN_DIR", str(tmp_path / "sbin"))
+    monkeypatch.setattr("fim.upgrade._MALWARE_BIN", str(tmp_path / "sbin" / "eccube-malware"))
+
+    with patch("fim.upgrade._fetch_release_info", return_value=("v1.2.0", "")), \
+         patch("fim.upgrade._download_tarball"), \
+         patch("fim.upgrade._find_extracted_root", return_value=str(tmp_path / "src")), \
+         patch("fim.upgrade._replace_fim_libraries"), \
+         patch("fim.upgrade._replace_malware_companion"), \
+         patch("fim.upgrade._run_migrations", return_value=0), \
+         patch("fim.upgrade._run_malware_migrations", return_value=0), \
+         patch("fim.upgrade._write_version_stamp"), \
+         patch("shutil.copy2"), \
+         patch("os.chmod"), \
+         patch("builtins.input") as mock_input:
+        result = upgrade(yes=True, config_dir=str(tmp_path))
+
+    assert result == 0
+    mock_input.assert_not_called()

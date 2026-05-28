@@ -1,0 +1,11 @@
+[Unit]
+Description=ClamAV Daily Malware Scan
+Documentation=https://github.com/arstokyo/eccube-fim
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+RandomizedDelaySec=300
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -23,7 +23,9 @@ main() {
     install_packages
     create_directories
     setup_tmpfiles
-    install_library
+    guard_existing_malware_version
+    install_common_library
+    install_fim_library
     install_version_stamp
     install_cli
     install_logrotate

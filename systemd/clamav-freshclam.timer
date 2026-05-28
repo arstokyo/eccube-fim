@@ -1,0 +1,10 @@
+[Unit]
+Description=ClamAV Signature Update (every 3h)
+
+[Timer]
+OnCalendar=*-*-* 00/3:00:00
+RandomizedDelaySec=60
+Persistent=true
+
+[Install]
+WantedBy=timers.target

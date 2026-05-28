@@ -1,0 +1,10 @@
+[Unit]
+Description=ClamAV Malware Scan (eccube-malware)
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=%%SBIN_DIR%%/eccube-malware
+User=root
+StandardOutput=journal
+StandardError=journal

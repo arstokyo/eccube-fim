@@ -27,6 +27,7 @@ cat \
     lib/installer/header.sh \
     lib/installer/helpers.sh \
     lib/installer/fetch.sh \
+    lib/installer/files.sh \
     lib/installer/malware.sh \
     lib/installer/malware_entry.sh \
     > "$MALWARE_OUT"

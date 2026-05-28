@@ -41,10 +41,29 @@ if actual < min_ver:
 " || exit 1
 }
 
+_download_release_asset() {
+    local asset_name="$1"
+    local dest_dir="$2"
+    local url="${REPO}/releases/download/${VERSION}/${asset_name}"
+    info "Downloading ${asset_name}..."
+    if ! curl -fsSL "$url" | tar xz --strip-components=1 -C "$dest_dir"; then
+        error "Download failed: ${asset_name}"
+        error "Check the release assets: ${REPO}/releases/tag/${VERSION}"
+        exit 1
+    fi
+}
+
+_prepare_release_source_dir() {
+    SRC_DIR="$(mktemp -d)"
+    # shellcheck disable=SC2064
+    # double-quoted: bake in SRC_DIR now so EXIT cleanup still has the path
+    trap "rm -rf '$SRC_DIR'" EXIT
+}
+
 fetch_source() {
     local script_dir
     script_dir="$(cd "$(dirname "${BASH_SOURCE[0]:-}")" 2>/dev/null && pwd || echo "")"
-    if [ -d "${script_dir}/fim" ]; then
+    if [ -d "${script_dir}/fim" ] && [ -d "${script_dir}/common" ]; then
         SRC_DIR="$script_dir"
         VERSION="local"
         info "Using local source: $SRC_DIR"
@@ -52,12 +71,9 @@ fetch_source() {
     fi
     _fetch_release_info
     _check_python_requires "$PYTHON_REQUIRES"
-    info "Downloading eccube-fim (${VERSION})..."
-    SRC_DIR="$(mktemp -d)"
-    # shellcheck disable=SC2064
-    trap "rm -rf '$SRC_DIR'" EXIT
-    curl -fsSL "${REPO}/archive/refs/tags/${VERSION}.tar.gz" \
-        | tar xz --strip-components=1 -C "$SRC_DIR"
+    _prepare_release_source_dir
+    _download_release_asset "eccube-common-${VERSION}.tar.gz" "$SRC_DIR"
+    _download_release_asset "eccube-fim-${VERSION}.tar.gz" "$SRC_DIR"
     info "Source ready: eccube-fim ${VERSION}"
 }
 

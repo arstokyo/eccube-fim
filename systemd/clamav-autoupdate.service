@@ -1,0 +1,10 @@
+[Unit]
+Description=ClamAV Package Auto-Update
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=%%SBIN_DIR%%/eccube-malware clamav upgrade --yes
+User=root
+StandardOutput=journal
+StandardError=journal

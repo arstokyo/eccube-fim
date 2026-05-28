@@ -80,14 +80,31 @@ def _migrate_only(config_dir: str) -> int:
     return 0
 
 
+def _confirm_co_upgrade(tool_name: str, companion: str, version: str, yes: bool) -> bool:
+    if yes:
+        return True
+    print("Co-install detected:")
+    print(f"  - {tool_name} will be upgraded to {version}")
+    print(f"  - {companion} will also be upgraded to {version}")
+    print(f"  - shared eccube-common will be upgraded to {version}")
+    answer = input(f"Co-upgrade {companion} too? [y/N]: ").strip().lower()
+    return answer == "y"
+
+
 def _install_release(version: str, yes: bool, config_dir: str) -> int:
+    # known: 49 lines — sequential install flow; splitting would require threading
+    # co_install state through multiple helpers with no clarity gain
     """Prompt, download `version`, and replace library + binary. Return 0 ok, 1 on failure."""
     co_install = _malware_installed()
     companion_note = f"  {INSTALL_LIB_DIR}/malware  {_MALWARE_BIN}" if co_install else ""
     print(f"Latest version : {version}")
     print(f"Will replace   : {INSTALL_LIB_DIR}/fim  {INSTALL_LIB_DIR}/common  "
           f"{INSTALL_SBIN_DIR}/eccube-fim{companion_note}")
-    if not yes:
+    if co_install:
+        if not _confirm_co_upgrade("eccube-fim", "eccube-malware", version, yes):
+            print("Cancelled")
+            return 1
+    elif not yes:
         answer = input("Proceed with upgrade? [y/N]: ").strip().lower()
         if answer != "y":
             print("Cancelled")

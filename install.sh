@@ -121,10 +121,29 @@ if actual < min_ver:
 " || exit 1
 }
 
+_download_release_asset() {
+    local asset_name="$1"
+    local dest_dir="$2"
+    local url="${REPO}/releases/download/${VERSION}/${asset_name}"
+    info "Downloading ${asset_name}..."
+    if ! curl -fsSL "$url" | tar xz --strip-components=1 -C "$dest_dir"; then
+        error "Download failed: ${asset_name}"
+        error "Check the release assets: ${REPO}/releases/tag/${VERSION}"
+        exit 1
+    fi
+}
+
+_prepare_release_source_dir() {
+    SRC_DIR="$(mktemp -d)"
+    # shellcheck disable=SC2064
+    # double-quoted: bake in SRC_DIR now so EXIT cleanup still has the path
+    trap "rm -rf '$SRC_DIR'" EXIT
+}
+
 fetch_source() {
     local script_dir
     script_dir="$(cd "$(dirname "${BASH_SOURCE[0]:-}")" 2>/dev/null && pwd || echo "")"
-    if [ -d "${script_dir}/fim" ]; then
+    if [ -d "${script_dir}/fim" ] && [ -d "${script_dir}/common" ]; then
         SRC_DIR="$script_dir"
         VERSION="local"
         info "Using local source: $SRC_DIR"
@@ -132,12 +151,9 @@ fetch_source() {
     fi
     _fetch_release_info
     _check_python_requires "$PYTHON_REQUIRES"
-    info "Downloading eccube-fim (${VERSION})..."
-    SRC_DIR="$(mktemp -d)"
-    # shellcheck disable=SC2064
-    trap "rm -rf '$SRC_DIR'" EXIT
-    curl -fsSL "${REPO}/archive/refs/tags/${VERSION}.tar.gz" \
-        | tar xz --strip-components=1 -C "$SRC_DIR"
+    _prepare_release_source_dir
+    _download_release_asset "eccube-common-${VERSION}.tar.gz" "$SRC_DIR"
+    _download_release_asset "eccube-fim-${VERSION}.tar.gz" "$SRC_DIR"
     info "Source ready: eccube-fim ${VERSION}"
 }
 
@@ -195,15 +211,95 @@ EOF
 }
 
 # ---------------------------------------------------------------------------
+# Companion version guard helpers
+# ---------------------------------------------------------------------------
+installed_version() {
+    local stamp="${CONFIG_DIR}/.version"
+    if [ ! -f "$stamp" ]; then
+        # No stamp means companion was installed before plan-082 introduced the stamp.
+        # Read __version__ from the companion Python module as a fallback so the
+        # version guard can still compare correctly.
+        local ver
+        ver=$(python3 -c "
+import sys
+sys.path.insert(0, '${LIB_DIR}')
+try:
+    from common.version import __version__; print(__version__)
+except Exception:
+    print('unknown')
+" 2>/dev/null)
+        echo "$ver"
+        return
+    fi
+    tr -d '[:space:]' < "$stamp"
+}
+
+target_version() {
+    echo "${VERSION#v}"
+}
+
+fim_installed() {
+    [ -d "${LIB_DIR}/fim" ] || [ -x "${SBIN_DIR}/eccube-fim" ]
+}
+
+malware_installed() {
+    [ -d "${LIB_DIR}/malware" ] || [ -x "${SBIN_DIR}/eccube-malware" ]
+}
+
+guard_existing_malware_version() {
+    [ "$VERSION" = "local" ] && return 0
+    malware_installed || return 0
+    local installed target
+    installed="$(installed_version)"
+    target="$(target_version)"
+    [ "$installed" = "$target" ] && return 0
+    error "Existing eccube-malware installation detected at version ${installed}."
+    error "This installer will install eccube-common ${target}; mixed versions are unsafe."
+    error "Run first: sudo eccube-malware upgrade"
+    error "Then rerun this eccube-fim installer."
+    exit 1
+}
+
+guard_existing_fim_version() {
+    [ "$VERSION" = "local" ] && return 0
+    fim_installed || return 0
+    local installed target
+    installed="$(installed_version)"
+    target="$(target_version)"
+    [ "$installed" = "$target" ] && return 0
+    error "Existing eccube-fim installation detected at version ${installed}."
+    error "This installer will install eccube-common ${target}; mixed versions are unsafe."
+    error "Run first: sudo eccube-fim upgrade"
+    error "Then rerun this eccube-malware installer."
+    exit 1
+}
+
+# ---------------------------------------------------------------------------
 # Library + CLI install
 # ---------------------------------------------------------------------------
-install_library() {
-    info "Installing Python library"
+install_common_library() {
+    info "Installing shared Python library"
+    mkdir -p "$LIB_DIR"
+    rm -rf "$LIB_DIR/common"
+    cp -R "$SRC_DIR/common" "$LIB_DIR/common"
+    find "$LIB_DIR/common" -type d -exec chmod 755 {} \;
+    find "$LIB_DIR/common" -type f -exec chmod 644 {} \;
+    chown -R root:root "$LIB_DIR/common"
+}
+
+install_fim_library() {
+    info "Installing FIM Python library"
+    mkdir -p "$LIB_DIR"
     rm -rf "$LIB_DIR/fim"
     cp -R "$SRC_DIR/fim" "$LIB_DIR/fim"
-    find "$LIB_DIR" -type d -exec chmod 755 {} \;
-    find "$LIB_DIR" -type f -exec chmod 644 {} \;
-    chown -R root:root "$LIB_DIR"
+    find "$LIB_DIR/fim" -type d -exec chmod 755 {} \;
+    find "$LIB_DIR/fim" -type f -exec chmod 644 {} \;
+    chown -R root:root "$LIB_DIR/fim"
+}
+
+install_library() {
+    install_common_library
+    install_fim_library
 }
 
 install_version_stamp() {
@@ -574,7 +670,9 @@ activate_systemd_units() {
 update_mode() {
     local daemon_f="$CONFIG_DIR/daemon.yaml"
     [ -f "$daemon_f" ] || { error "No config found — run without --update for a fresh install"; exit 1; }
-    install_library
+    guard_existing_malware_version
+    install_common_library
+    install_fim_library
     install_cli
     install_logrotate
     # run after new lib + binary are in place so new migration files are used
@@ -669,7 +767,9 @@ main() {
     install_packages
     create_directories
     setup_tmpfiles
-    install_library
+    guard_existing_malware_version
+    install_common_library
+    install_fim_library
     install_version_stamp
     install_cli
     install_logrotate

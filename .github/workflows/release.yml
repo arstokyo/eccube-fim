@@ -17,18 +17,48 @@ jobs:
       - name: Derive version from tag
         run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
 
-      - name: Stamp __version__ in fim/version.py
+      - name: Stamp __version__ in common/version.py
         run: |
-          sed -i "s/__version__ = \".*\"/__version__ = \"${VERSION}\"/" fim/version.py
+          sed -i "s/__version__        = \".*\"/__version__        = \"${VERSION}\"/" common/version.py
 
-      - name: Build release tarball
+      - name: Build generated installers
+        run: |
+          chmod +x build.sh
+          ./build.sh
+
+      - name: Build common tarball
+        run: |
+          DIST="eccube-common-${GITHUB_REF_NAME}"
+          mkdir "$DIST"
+          cp -r common "$DIST/"
+          tar -czf "${DIST}.tar.gz" "$DIST/"
+
+      - name: Build FIM tarball
         run: |
           DIST="eccube-fim-${GITHUB_REF_NAME}"
           mkdir "$DIST"
-          cp -r fim bin config \
-                systemd \
-                eccube-fim.logrotate install.sh \
-                "$DIST/"
+          mkdir "$DIST/config"
+          mkdir "$DIST/bin"
+          mkdir "$DIST/systemd"
+          cp -r fim "$DIST/"
+          cp bin/eccube-fim "$DIST/bin/"
+          cp systemd/eccube-fim-* "$DIST/systemd/"
+          cp config/daemon.yaml.sample config/targets.yaml.sample config/notify.yaml.sample "$DIST/config/"
+          cp eccube-fim.logrotate install.sh "$DIST/"
+          tar -czf "${DIST}.tar.gz" "$DIST/"
+
+      - name: Build malware tarball
+        run: |
+          DIST="eccube-malware-${GITHUB_REF_NAME}"
+          mkdir "$DIST"
+          mkdir "$DIST/config"
+          mkdir "$DIST/bin"
+          mkdir "$DIST/systemd"
+          cp -r malware "$DIST/"
+          cp bin/eccube-malware "$DIST/bin/"
+          cp systemd/clamav-* "$DIST/systemd/"
+          cp config/malware.yaml.sample config/notify.yaml.sample "$DIST/config/"
+          cp eccube-malware.logrotate install-malware.sh "$DIST/"
           tar -czf "${DIST}.tar.gz" "$DIST/"
 
       - name: Build plugin tarball
@@ -50,5 +80,7 @@ jobs:
             ---
             python_requires: ">=3.9"
           files: |
+            eccube-common-${{ github.ref_name }}.tar.gz
             eccube-fim-${{ github.ref_name }}.tar.gz
+            eccube-malware-${{ github.ref_name }}.tar.gz
             eccube-fim-plugin-${{ github.ref_name }}.tar.gz

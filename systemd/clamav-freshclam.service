@@ -1,0 +1,11 @@
+[Unit]
+Description=ClamAV Signature Update (freshclam)
+After=network.target
+
+[Service]
+Type=oneshot
+# --no-warnings suppresses the clamd socket notification warning (we run clamscan standalone, not clamd)
+ExecStart=/usr/bin/freshclam --no-warnings
+User=root
+StandardOutput=journal
+StandardError=journal
