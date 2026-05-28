@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 import re
@@ -7,6 +6,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from common.status import atomic_write_json
 from fim.config import (
     Config,
     INSTALL_STATUS_DIR, INSTALL_STATUS_FILE,
@@ -91,12 +91,5 @@ def _recent_log_lines() -> list[str]:
 
 
 def _atomic_write(data: dict[str, Any]) -> None:
-    try:
-        Path(INSTALL_STATUS_DIR).mkdir(parents=True, exist_ok=True)
-        tmp = Path(INSTALL_STATUS_FILE).with_suffix(".tmp")
-        tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-        # 644: web process (apache/www-data) can read; JSON contains no credentials
-        os.chmod(tmp, 0o644)
-        tmp.rename(INSTALL_STATUS_FILE)
-    except OSError as e:
-        log.warning("Cannot write status file: %s", e)
+    if not atomic_write_json(data, INSTALL_STATUS_FILE):
+        log.warning("Cannot write status file: %s", INSTALL_STATUS_FILE)

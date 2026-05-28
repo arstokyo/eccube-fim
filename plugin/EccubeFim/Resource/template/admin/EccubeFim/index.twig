@@ -127,7 +127,127 @@
             </div>
         </div>
 
-        {% endif %}
+        {% endif %}{# end status.available #}
+
+        {# ══════════════════════════════════════════════════════════
+           マルウェアスキャンセクション
+           ══════════════════════════════════════════════════════════ #}
+
+        {% if not malware_status.installed %}
+        <div class="alert alert-secondary" role="alert">
+            <i class="fa fa-info-circle mr-1"></i>
+            {{ 'eccube_fim.malware.label.not_installed'|trans }}
+            <br>
+            <small class="text-muted">{{ 'eccube_fim.malware.label.not_installed_hint'|trans|raw }}</small>
+        </div>
+
+        {% elseif not malware_status.available %}
+        <div class="alert alert-danger" role="alert">
+            <i class="fa fa-exclamation-triangle mr-1"></i>
+            {{ malware_status.error|trans }}
+        </div>
+
+        {% else %}
+
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fa fa-bug mr-1"></i> {{ 'eccube_fim.malware.panel.service_status'|trans }}</span>
+                <small class="text-muted">
+                    {{ malware_status.generated_at_fmt ?? '' }} {{ 'eccube_fim.label.updated'|trans }}
+                    （{{ malware_status.generated_age_fmt ?? '' }}）
+                </small>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-sm-3 mb-3">
+                        <div class="text-muted small mb-1">{{ 'eccube_fim.malware.label.last_scan'|trans }}</div>
+                        {% if malware_status.last_scan_at is not null %}
+                            <small>{{ malware_status.last_scan_at_fmt }}</small>
+                        {% else %}
+                            <span class="text-muted small">—</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-sm-3 mb-3">
+                        <div class="text-muted small mb-1">{{ 'eccube_fim.malware.label.scan_result'|trans }}</div>
+                        {% set ss = malware_status.last_scan_status %}
+                        {% if ss == 'clean' %}
+                            <span class="badge badge-success badge-pill">{{ 'eccube_fim.malware.status.clean'|trans }}</span>
+                        {% elseif ss == 'infected' %}
+                            <span class="badge badge-danger badge-pill">
+                                {{ 'eccube_fim.malware.status.infected'|trans }}（{{ malware_status.last_scan_infected_count }}件）
+                            </span>
+                        {% elseif ss == 'error' %}
+                            <span class="badge badge-warning badge-pill">{{ 'eccube_fim.malware.status.error'|trans }}</span>
+                        {% else %}
+                            <span class="badge badge-secondary badge-pill">{{ 'eccube_fim.malware.status.never'|trans }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-sm-3 mb-3">
+                        <div class="text-muted small mb-1">{{ 'eccube_fim.malware.label.suppressed'|trans }}</div>
+                        {% if malware_status.suppressed_count > 0 %}
+                            <span class="badge badge-warning badge-pill">{{ malware_status.suppressed_count }} {{ 'eccube_fim.label.count_unit'|trans }}</span>
+                        {% else %}
+                            <span class="badge badge-secondary badge-pill">0 {{ 'eccube_fim.label.count_unit'|trans }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-sm-3 mb-3">
+                        <div class="text-muted small mb-1">{{ 'eccube_fim.malware.label.clamav'|trans }}</div>
+                        <small>{{ malware_status.clamav_version ?? 'N/A' }}</small><br>
+                        <small>
+                            {{ 'eccube_fim.malware.label.scan_timer'|trans }}:
+                            {% if malware_status.scan_timer_active %}
+                                <span class="text-success">{{ 'eccube_fim.malware.label.active'|trans }}</span>
+                            {% else %}
+                                <span class="text-danger">{{ 'eccube_fim.malware.label.inactive'|trans }}</span>
+                            {% endif %}
+                            /
+                            {{ 'eccube_fim.malware.label.freshclam_timer'|trans }}:
+                            {% if malware_status.freshclam_timer_active %}
+                                <span class="text-success">{{ 'eccube_fim.malware.label.active'|trans }}</span>
+                            {% else %}
+                                <span class="text-danger">{{ 'eccube_fim.malware.label.inactive'|trans }}</span>
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fa fa-bug mr-1"></i>
+                {{ 'eccube_fim.malware.panel.recent_detections'|trans }}
+            </div>
+            {% if malware_status.recent_detections is empty %}
+            <div class="card-body text-muted">
+                <i class="fa fa-check-circle text-success mr-1"></i>
+                {{ 'eccube_fim.malware.label.no_detections'|trans }}
+            </div>
+            {% else %}
+            <div class="card-body p-0">
+                <table class="table table-sm table-bordered table-hover mb-0">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>{{ 'eccube_fim.malware.table.file_path'|trans }}</th>
+                            <th style="width:220px">{{ 'eccube_fim.malware.table.virus_name'|trans }}</th>
+                            <th style="width:180px">{{ 'eccube_fim.malware.table.detected_at'|trans }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for det in malware_status.recent_detections %}
+                        <tr>
+                            <td><code class="text-danger">{{ det.path }}</code></td>
+                            <td><code>{{ det.virus_name }}</code></td>
+                            <td>{{ det.detected_at_fmt ?? '-' }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </div>
+
+        {% endif %}{# end malware_status.installed #}
 
     </div>
 </div>

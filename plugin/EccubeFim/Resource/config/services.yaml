@@ -1,5 +1,6 @@
 parameters:
-    fim.status_file: '/var/lib/eccube-fim/status.json'
+    fim.status_file:     '/var/lib/eccube-fim/status.json'
+    malware.status_file: '/var/lib/eccube-fim/malware_status.json'
 
 services:
     _defaults:
@@ -7,7 +8,11 @@ services:
         autoconfigure: true
         public: false
 
-    # explicit argument override — fim.status_file is not type-hintable
+    # explicit argument override — status file paths are not type-hintable
     Plugin\EccubeFim\Service\FimStatusService:
         arguments:
             - '%fim.status_file%'
+
+    Plugin\EccubeFim\Service\MalwareStatusService:
+        arguments:
+            - '%malware.status_file%'

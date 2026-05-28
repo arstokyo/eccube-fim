@@ -24,3 +24,31 @@ eccube_fim.label.no_log: 'ログなし'
 
 eccube_fim.table.file_path: 'ファイルパス'
 eccube_fim.table.last_detected: '最終検知日時'
+
+# --- Malware ---
+eccube_fim.malware.error.file_unreadable: 'マルウェアステータスファイルが読み取れません。'
+eccube_fim.malware.error.file_read_failed: 'マルウェアステータスファイルの読み取りに失敗しました。'
+eccube_fim.malware.error.invalid_format: 'マルウェアステータスファイルのフォーマットが不正です。'
+
+eccube_fim.malware.panel.service_status: 'マルウェアスキャン状態'
+eccube_fim.malware.panel.recent_detections: '最近のマルウェア検知（直近20件）'
+eccube_fim.malware.label.not_installed: 'マルウェアスキャナー未インストール'
+eccube_fim.malware.label.not_installed_hint: 'インストール: <code>./install-malware.sh</code> を実行してください。'
+eccube_fim.malware.label.last_scan: '最終スキャン'
+eccube_fim.malware.label.scan_result: 'スキャン結果'
+eccube_fim.malware.label.suppressed: '抑止中検知'
+eccube_fim.malware.label.clamav: 'ClamAV'
+eccube_fim.malware.label.scan_timer: 'スキャンタイマー'
+eccube_fim.malware.label.freshclam_timer: 'freshclamタイマー'
+eccube_fim.malware.label.active: 'active'
+eccube_fim.malware.label.inactive: 'inactive'
+eccube_fim.malware.label.no_detections: 'マルウェア検知なし'
+
+eccube_fim.malware.status.clean: 'クリーン'
+eccube_fim.malware.status.infected: '検知あり'
+eccube_fim.malware.status.error: 'エラー'
+eccube_fim.malware.status.never: 'スキャン未実行'
+
+eccube_fim.malware.table.file_path: 'ファイルパス'
+eccube_fim.malware.table.virus_name: 'ウイルス名'
+eccube_fim.malware.table.detected_at: '最終検知日時'
