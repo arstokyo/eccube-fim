@@ -20,6 +20,7 @@ from fim.config import (
     INSTALL_LOGROTATE_PATH, INSTALL_TMPFILES_PATH,
     INSTALL_TIMER_NAME, INSTALL_SERVICE_NAME,
 )
+from fim.utils import LOG_DIR as INSTALL_LOG_DIR
 
 _TIMERS   = [INSTALL_TIMER_NAME]
 _SERVICES = [INSTALL_SERVICE_NAME]
@@ -35,6 +36,7 @@ def _stop_and_remove_units() -> None:
 
 
 def _remove_files(keep_config: bool, malware_present: bool) -> None:
+    shutil.rmtree(INSTALL_LOG_DIR, ignore_errors=True)
     for path in (INSTALL_LOGROTATE_PATH, INSTALL_TMPFILES_PATH,
                  os.path.join(INSTALL_SBIN_DIR, "eccube-fim")):
         if os.path.exists(path):

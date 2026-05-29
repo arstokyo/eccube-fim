@@ -20,6 +20,7 @@ def fake_install(monkeypatch, tmp_path):
     monkeypatch.setattr("fim.lifecycle.INSTALL_MALWARE_MARKER",   str(tmp_path / "no-marker"))
     monkeypatch.setattr("fim.lifecycle.INSTALL_STATUS_FILE",      str(tmp_path / "status.json"))
     monkeypatch.setattr("fim.lifecycle.INSTALL_STATUS_DIR",       str(tmp_path / "varlib"))
+    monkeypatch.setattr("fim.lifecycle.INSTALL_LOG_DIR",          str(tmp_path / "log"))
     monkeypatch.setattr("common.lifecycle.subprocess.run",        lambda *a, **kw: None)
     monkeypatch.setattr("os.geteuid", lambda: 0)
 
@@ -31,6 +32,7 @@ def fake_install(monkeypatch, tmp_path):
     (tmp_path / "cfg").mkdir()
     (tmp_path / "systemd").mkdir()
     (tmp_path / "varlib").mkdir()
+    (tmp_path / "log").mkdir()
     return tmp_path
 
 
@@ -84,11 +86,13 @@ def test_uninstall_preserves_common_when_malware_installed(monkeypatch, tmp_path
     monkeypatch.setattr("fim.lifecycle.INSTALL_MALWARE_MARKER",   str(marker))
     monkeypatch.setattr("fim.lifecycle.INSTALL_STATUS_FILE",      str(tmp_path / "status.json"))
     monkeypatch.setattr("fim.lifecycle.INSTALL_STATUS_DIR",       str(tmp_path / "varlib"))
+    monkeypatch.setattr("fim.lifecycle.INSTALL_LOG_DIR",          str(tmp_path / "log"))
     monkeypatch.setattr("common.lifecycle.subprocess.run",        lambda *a, **kw: None)
     monkeypatch.setattr("os.geteuid", lambda: 0)
     (tmp_path / "cfg").mkdir()
     (tmp_path / "systemd").mkdir()
     (tmp_path / "varlib").mkdir()
+    (tmp_path / "log").mkdir()
 
     assert uninstall(keep_config=True, yes=True) == 0
     assert not (lib / "fim").exists()
@@ -120,10 +124,12 @@ def test_uninstall_removes_only_fim_files_when_malware_installed(monkeypatch, tm
     monkeypatch.setattr("fim.lifecycle.INSTALL_MALWARE_MARKER",   str(marker))
     monkeypatch.setattr("fim.lifecycle.INSTALL_STATUS_FILE",      str(tmp_path / "status.json"))
     monkeypatch.setattr("fim.lifecycle.INSTALL_STATUS_DIR",       str(tmp_path / "varlib"))
+    monkeypatch.setattr("fim.lifecycle.INSTALL_LOG_DIR",          str(tmp_path / "log"))
     monkeypatch.setattr("common.lifecycle.subprocess.run",        lambda *a, **kw: None)
     monkeypatch.setattr("os.geteuid", lambda: 0)
     (tmp_path / "systemd").mkdir()
     (tmp_path / "varlib").mkdir()
+    (tmp_path / "log").mkdir()
 
     assert uninstall(keep_config=False, yes=True) == 0
     assert cfg.exists()                         # dir survives — malware still installed
@@ -154,10 +160,12 @@ def test_uninstall_removes_status_file(monkeypatch, tmp_path):
     monkeypatch.setattr("fim.lifecycle.INSTALL_MALWARE_MARKER",   str(tmp_path / "no-marker"))
     monkeypatch.setattr("fim.lifecycle.INSTALL_STATUS_FILE",      str(status_file))
     monkeypatch.setattr("fim.lifecycle.INSTALL_STATUS_DIR",       str(varlib))
+    monkeypatch.setattr("fim.lifecycle.INSTALL_LOG_DIR",          str(tmp_path / "log"))
     monkeypatch.setattr("common.lifecycle.subprocess.run",        lambda *a, **kw: None)
     monkeypatch.setattr("os.geteuid", lambda: 0)
     (tmp_path / "cfg").mkdir()
     (tmp_path / "systemd").mkdir()
+    (tmp_path / "log").mkdir()
 
     assert uninstall(keep_config=False, yes=True) == 0
     assert not status_file.exists()
@@ -181,10 +189,12 @@ def test_uninstall_removes_status_dir_when_malware_absent(monkeypatch, tmp_path)
     monkeypatch.setattr("fim.lifecycle.INSTALL_MALWARE_MARKER",   str(tmp_path / "no-marker"))
     monkeypatch.setattr("fim.lifecycle.INSTALL_STATUS_FILE",      str(tmp_path / "no-status.json"))
     monkeypatch.setattr("fim.lifecycle.INSTALL_STATUS_DIR",       str(varlib))
+    monkeypatch.setattr("fim.lifecycle.INSTALL_LOG_DIR",          str(tmp_path / "log"))
     monkeypatch.setattr("common.lifecycle.subprocess.run",        lambda *a, **kw: None)
     monkeypatch.setattr("os.geteuid", lambda: 0)
     (tmp_path / "cfg").mkdir()
     (tmp_path / "systemd").mkdir()
+    (tmp_path / "log").mkdir()
 
     assert uninstall(keep_config=False, yes=True) == 0
     assert not varlib.exists()
@@ -210,13 +220,23 @@ def test_uninstall_retains_status_dir_when_malware_installed(monkeypatch, tmp_pa
     monkeypatch.setattr("fim.lifecycle.INSTALL_MALWARE_MARKER",   str(marker))
     monkeypatch.setattr("fim.lifecycle.INSTALL_STATUS_FILE",      str(tmp_path / "no-status.json"))
     monkeypatch.setattr("fim.lifecycle.INSTALL_STATUS_DIR",       str(varlib))
+    monkeypatch.setattr("fim.lifecycle.INSTALL_LOG_DIR",          str(tmp_path / "log"))
     monkeypatch.setattr("common.lifecycle.subprocess.run",        lambda *a, **kw: None)
     monkeypatch.setattr("os.geteuid", lambda: 0)
     (tmp_path / "cfg").mkdir()
     (tmp_path / "systemd").mkdir()
+    (tmp_path / "log").mkdir()
 
     assert uninstall(keep_config=False, yes=True) == 0
     assert varlib.exists()   # malware still installed — status dir must survive
+
+
+def test_uninstall_removes_log_dir(fake_install):
+    """Log directory must be removed on FIM uninstall."""
+    log_dir = fake_install / "log"
+    (log_dir / "check.log").write_text("log data")
+    assert uninstall(keep_config=False, yes=True) == 0
+    assert not log_dir.exists()
 
 
 # ---------------------------------------------------------------------------
