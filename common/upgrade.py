@@ -1,6 +1,5 @@
 import json
 import os
-import re
 import shutil
 import sys
 import tarfile
@@ -10,7 +9,13 @@ from typing import Callable
 
 from common.constants import FETCH_TIMEOUT as _FETCH_TIMEOUT
 from common.lifecycle import require_root
-from common.version import REPO_SLUG, VERSION_CHECK_URL, read_installed_version
+from common.version import (
+    REPO_SLUG,
+    VERSION_CHECK_URL,
+    parse_python_requires,
+    python_meets,
+    read_installed_version,
+)
 
 
 def fetch_release_info() -> tuple[str, str]:
@@ -31,23 +36,20 @@ def fetch_release_info() -> tuple[str, str]:
     tag = data.get("tag_name")
     if not tag:
         raise RuntimeError("No releases found — publish a GitHub release first")
-    m = re.search(r'python_requires:\s*"(.*?)"', data.get("body", ""))
-    return tag, m.group(1) if m else ""
+    return tag, parse_python_requires(data.get("body", ""))
 
 
 def check_python_requires(requires: str) -> None:
     """Raise SystemExit(1) if the running Python doesn't meet the requirement."""
-    if not requires:
+    if python_meets(requires):
         return
-    min_parts = tuple(int(x) for x in requires.lstrip(">=").split("."))
-    if sys.version_info[:len(min_parts)] < min_parts:
-        running = f"{sys.version_info.major}.{sys.version_info.minor}"
-        needed = ".".join(str(x) for x in min_parts)
-        print(f"Error: this release requires Python {needed}+ (you have {running}).",
-              file=sys.stderr)
-        print("You are already on the latest version compatible with your Python.",
-              file=sys.stderr)
-        raise SystemExit(1)
+    running = f"{sys.version_info.major}.{sys.version_info.minor}"
+    needed = ".".join(str(x) for x in requires.lstrip(">=").split("."))
+    print(f"Error: this release requires Python {needed}+ (you have {running}).",
+          file=sys.stderr)
+    print("You are already on the latest version compatible with your Python.",
+          file=sys.stderr)
+    raise SystemExit(1)
 
 
 def download_tarball(version: str, dest_dir: str) -> None:
@@ -108,7 +110,7 @@ def migrate_only(config_dir: str, cli_name: str,
     return 0
 
 
-def run_upgrade(config_dir: str, yes: bool, force: bool, migrate_only: bool,
+def run_upgrade(config_dir: str, yes: bool, force: bool, migrate_only_flag: bool,
                 install_release: Callable[[str, bool, str], int],
                 migrate_only_fn: Callable[[str], int]) -> int:
     """Drive the standard upgrade flow shared by eccube-fim and eccube-malware.
@@ -119,7 +121,7 @@ def run_upgrade(config_dir: str, yes: bool, force: bool, migrate_only: bool,
     """
     if not require_root():
         return 1
-    if migrate_only:
+    if migrate_only_flag:
         return migrate_only_fn(config_dir)
     try:
         version, python_requires = fetch_release_info()

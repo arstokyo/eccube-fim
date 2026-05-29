@@ -11,9 +11,27 @@ from common.constants import DEFAULT_CONFIG_DIR, FETCH_TIMEOUT as _FETCH_TIMEOUT
 __version__        = "dev"
 REPO_SLUG          = "arstokyo/eccube-fim"
 VERSION_CHECK_URL  = f"https://api.github.com/repos/{REPO_SLUG}/releases/latest"
-COMMON_API_VERSION = 1   # bump when common/ API breaks backward compatibility
 
 _CHECK_INTERVAL_HOURS = 24
+
+_PYTHON_REQUIRES_RE = re.compile(r'python_requires:\s*"(.*?)"')
+
+
+def parse_python_requires(body: str) -> str:
+    """Extract the python_requires spec (e.g. '>=3.9') from a release body, or ''."""
+    m = _PYTHON_REQUIRES_RE.search(body)
+    return m.group(1) if m else ""
+
+
+def python_meets(requires: str) -> bool:
+    """Return True if the running interpreter satisfies a '>=X.Y' requirement.
+
+    An empty requirement is treated as 'no constraint' and always passes.
+    """
+    if not requires:
+        return True
+    min_parts = tuple(int(x) for x in requires.lstrip(">=").split("."))
+    return sys.version_info[:len(min_parts)] >= min_parts
 
 
 def read_installed_version(config_dir: str = DEFAULT_CONFIG_DIR) -> str:
@@ -70,13 +88,8 @@ def _fetch_latest(config_dir: str = DEFAULT_CONFIG_DIR) -> Optional[tuple[str, s
         latest = tag.lstrip("v")
         if not latest or latest == current:
             return None
-        body = data.get("body", "")
-        m = re.search(r'python_requires:\s*"(.*?)"', body)
-        if m:
-            requires = m.group(1)
-            min_parts = tuple(int(x) for x in requires.lstrip(">=").split("."))
-            if sys.version_info[:len(min_parts)] < min_parts:
-                return None
+        if not python_meets(parse_python_requires(data.get("body", ""))):
+            return None
         return (current, latest)
     except Exception:
         pass  # known: intentionally silent on any network or parse failure

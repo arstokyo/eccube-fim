@@ -3,7 +3,7 @@ from pathlib import Path
 
 import yaml
 
-from common.constants import DEFAULT_CONFIG_DIR
+from common.constants import DEFAULT_CONFIG_DIR, DEFAULT_SMTP_PORT
 
 
 def setup_notify_interactive(config_dir: str) -> int:
@@ -41,7 +41,9 @@ def _prompt_email(current: dict) -> dict:
     return {
         "enabled":            True,
         "smtp_host":          _ask("SMTP host", current.get("smtp_host", "")),
-        "smtp_port":          _safe_int(_ask("SMTP port", str(current.get("smtp_port", 587))), 587),
+        "smtp_port":          _safe_int(_ask("SMTP port",
+                                              str(current.get("smtp_port", DEFAULT_SMTP_PORT))),
+                                         DEFAULT_SMTP_PORT),
         "smtp_user":          _ask("SMTP user (blank = no auth)", current.get("smtp_user", "")),
         "smtp_password_file": _ask("SMTP password file",
                                    current.get("smtp_password_file",
