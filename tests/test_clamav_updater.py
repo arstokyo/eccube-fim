@@ -1,8 +1,11 @@
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, call
 
-import pytest
-
-from malware.clamav_updater import upgrade_clamav, _detect_pkg_manager, _do_upgrade
+from malware.clamav_updater import (
+    upgrade_clamav,
+    _detect_pkg_manager,
+    _do_upgrade,
+    _suppress_distro_freshclam,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -49,6 +52,19 @@ def test_do_upgrade_apt_calls_correct_command():
 
 
 # ---------------------------------------------------------------------------
+# _suppress_distro_freshclam
+# ---------------------------------------------------------------------------
+
+def test_suppress_distro_freshclam_stops_and_disables():
+    with patch("subprocess.run") as mock_run:
+        _suppress_distro_freshclam()
+    assert mock_run.call_args_list == [
+        call(["systemctl", "stop", "clamav-freshclam.service"], check=False),
+        call(["systemctl", "disable", "clamav-freshclam.service"], check=False),
+    ]
+
+
+# ---------------------------------------------------------------------------
 # upgrade_clamav
 # ---------------------------------------------------------------------------
 
@@ -68,26 +84,30 @@ def test_upgrade_clamav_already_up_to_date(capsys):
     assert "already up to date" in capsys.readouterr().out
 
 
-def test_upgrade_clamav_success(capsys):
+def test_upgrade_clamav_success_suppresses_distro_freshclam(capsys):
     with patch("malware.clamav_updater._detect_pkg_manager", return_value="dnf"), \
          patch("malware.clamav_updater.get_installed_version", side_effect=["1.2.1", "1.2.3"]), \
          patch("malware.clamav_updater.get_available_version", return_value="1.2.3"), \
          patch("malware.clamav_updater._do_upgrade", return_value=0), \
+         patch("malware.clamav_updater._suppress_distro_freshclam") as mock_suppress, \
          patch("malware.clamav_updater.invalidate_cache"):
         rc = upgrade_clamav(yes=True)
     assert rc == 0
+    mock_suppress.assert_called_once_with()
     out = capsys.readouterr().out
     assert "1.2.1" in out
     assert "1.2.3" in out
 
 
-def test_upgrade_clamav_failure(capsys):
+def test_upgrade_clamav_failure_skips_suppression(capsys):
     with patch("malware.clamav_updater._detect_pkg_manager", return_value="dnf"), \
          patch("malware.clamav_updater.get_installed_version", return_value="1.2.1"), \
          patch("malware.clamav_updater.get_available_version", return_value="1.2.3"), \
-         patch("malware.clamav_updater._do_upgrade", return_value=1):
+         patch("malware.clamav_updater._do_upgrade", return_value=1), \
+         patch("malware.clamav_updater._suppress_distro_freshclam") as mock_suppress:
         rc = upgrade_clamav(yes=True)
     assert rc == 1
+    mock_suppress.assert_not_called()
     assert "Upgrade failed" in capsys.readouterr().err
 
 

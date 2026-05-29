@@ -2,7 +2,7 @@
 Description=ClamAV Package Auto-Update
 
 [Timer]
-OnCalendar=*-*-* 00:00:00
+OnCalendar=*-*-* 01:30:00
 RandomizedDelaySec=300
 Persistent=true
 
