@@ -117,8 +117,9 @@ _warn_root_ssh() {
 }
 
 warn_uncommitted_changes() {
+    # match either column: " M" (worktree edit, unstaged) or "M "/"D " (staged)
     if ! git -c "safe.directory=$ECCUBE_ROOT" -C "$ECCUBE_ROOT" \
-            status --porcelain 2>/dev/null | grep -qE '^[MD]'; then
+            status --porcelain 2>/dev/null | grep -qE '^.?[MD]'; then
         return
     fi
     warn "Uncommitted changes detected in $ECCUBE_ROOT"
