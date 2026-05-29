@@ -16,7 +16,7 @@ migrate_only_mode() {
     _read_interval_from_timer
     install_systemd_files
     systemctl restart eccube-fim-check.timer
-    install_post_merge_hook
+    install_git_hooks
     info "Force-retry complete"
 }
 

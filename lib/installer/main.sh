@@ -19,7 +19,7 @@ main() {
         info "EC-CUBE FIM installer (version: ${VERSION}, OS: ${OS_ID})"
         install_packages
         update_mode
-        install_post_merge_hook
+        install_git_hooks
         info "Update complete"
         post_install_checks
         return
@@ -38,7 +38,7 @@ main() {
     install_logrotate
     wizard
     secure_git_dir
-    install_post_merge_hook
+    install_git_hooks
     _warn_root_ssh
     warn_uncommitted_changes
     install_systemd_files
