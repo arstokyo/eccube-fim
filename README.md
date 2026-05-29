@@ -92,8 +92,12 @@ eccube-malware config setup-notify
 
 ## Plugin (EC-CUBE Admin Dashboard)
 
-The plugin adds a read-only FIM status dashboard to the EC-CUBE admin panel
+The plugin adds a read-only status dashboard to the EC-CUBE admin panel
 (`/admin/fim`). It requires the eccube-fim daemon to be installed first.
+
+The dashboard shows a **FIM panel** (service state, heartbeat health, recent
+detections) and, if `eccube-malware` is also installed, a **malware scan panel**
+(last scan time, result, infected file count, suppressed detection count).
 
 **Step 1 — Copy plugin files (run as root):**
 
@@ -128,6 +132,7 @@ All commands require root (`sudo`) except where noted.
 | Command | Description |
 |---|---|
 | `eccube-fim check` | Run an integrity check immediately (systemd runs this automatically) |
+| `eccube-fim check --dry-run` | Detect changes and log but skip notifications and DB writes |
 | `eccube-fim approve <file> -m "reason"` | Mark a detected change as intentional; clears the alert |
 | `eccube-fim status` | Dashboard: service state, last heartbeat, DB record count, last log line |
 | `eccube-fim log` | Tail the check log (last 20 lines); `--lines N` or `--level ERROR` to filter |
@@ -178,7 +183,7 @@ Override built-in email/Slack message templates without editing config YAML.
 | Command | Description |
 |---|---|
 | `eccube-fim upgrade` | Download and install the latest release |
-| `eccube-fim uninstall` | Stop the service and remove all installed files |
+| `eccube-fim uninstall` | Stop the service and remove all installed files; `--keep-config` preserves `/etc/eccube-fim` (config, secrets, state.db) |
 
 ---
 
@@ -234,12 +239,19 @@ Managed via `config target`; persisted to `/etc/eccube-fim/malware.yaml`.
 | `eccube-malware db list` | Show all suppressed detection records |
 | `eccube-malware db clear` | Remove suppression records — all, or `--file <path>` for one file |
 
+### ClamAV package
+
+| Command | Description |
+|---|---|
+| `eccube-malware clamav status` | Show installed and available ClamAV version |
+| `eccube-malware clamav upgrade` | Upgrade ClamAV to the latest version via the OS package manager |
+
 ### Lifecycle
 
 | Command | Description |
 |---|---|
 | `eccube-malware upgrade` | Download and install the latest release |
-| `eccube-malware uninstall` | Stop timers and remove all installed files; `--keep-config` preserves `malware.yaml` and the suppression DB |
+| `eccube-malware uninstall` | Stop timers and remove all installed files; `--keep-config` preserves `malware.yaml` and the suppression DB; `--keep-clamav` skips ClamAV package removal (use if ClamAV was pre-installed) |
 
 ---
 
