@@ -253,55 +253,56 @@ malware_installed() {
     [ -d "${LIB_DIR}/malware" ] || [ -x "${SBIN_DIR}/eccube-malware" ]
 }
 
-guard_existing_malware_version() {
+# Generic version guard — called by guard_existing_fim_version(), guard_existing_malware_version()
+guard_existing_version() {
+    local module="$1" bin_name="$2"
     [ "$VERSION" = "local" ] && return 0
-    malware_installed || return 0
+    case "$module" in
+        fim)     fim_installed     || return 0 ;;
+        malware) malware_installed || return 0 ;;
+        *)       error "guard_existing_version: unknown module '$module'"; exit 1 ;;
+    esac
     local installed target
     installed="$(installed_version)"
     target="$(target_version)"
     [ "$installed" = "$target" ] && return 0
-    error "Existing eccube-malware installation detected at version ${installed}."
+    error "Existing $bin_name installation detected at version ${installed}."
     error "This installer will install eccube-common ${target}; mixed versions are unsafe."
-    error "Run first: sudo eccube-malware upgrade"
-    error "Then rerun this eccube-fim installer."
+    error "Run first: sudo $bin_name upgrade"
+    error "Then rerun this installer."
     exit 1
 }
 
+guard_existing_malware_version() {
+    guard_existing_version "malware" "eccube-malware"
+}
+
 guard_existing_fim_version() {
-    [ "$VERSION" = "local" ] && return 0
-    fim_installed || return 0
-    local installed target
-    installed="$(installed_version)"
-    target="$(target_version)"
-    [ "$installed" = "$target" ] && return 0
-    error "Existing eccube-fim installation detected at version ${installed}."
-    error "This installer will install eccube-common ${target}; mixed versions are unsafe."
-    error "Run first: sudo eccube-fim upgrade"
-    error "Then rerun this eccube-malware installer."
-    exit 1
+    guard_existing_version "fim" "eccube-fim"
 }
 
 # ---------------------------------------------------------------------------
 # Library + CLI install
 # ---------------------------------------------------------------------------
-install_common_library() {
-    info "Installing shared Python library"
+# Generic library installer — called by install_common_library(), install_fim_library(), install_malware_library()
+install_library_module() {
+    local module="$1"
+    [ -n "$module" ] || { error "install_library_module: module name required"; exit 1; }
+    info "Installing $module Python library"
     mkdir -p "$LIB_DIR"
-    rm -rf "$LIB_DIR/common"
-    cp -R "$SRC_DIR/common" "$LIB_DIR/common"
-    find "$LIB_DIR/common" -type d -exec chmod 755 {} \;
-    find "$LIB_DIR/common" -type f -exec chmod 644 {} \;
-    chown -R root:root "$LIB_DIR/common"
+    rm -rf "$LIB_DIR/$module"
+    cp -r "$SRC_DIR/$module" "$LIB_DIR/$module"
+    find "$LIB_DIR/$module" -type d -exec chmod 755 {} \;
+    find "$LIB_DIR/$module" -type f -exec chmod 644 {} \;
+    chown -R root:root "$LIB_DIR/$module"
+}
+
+install_common_library() {
+    install_library_module "common"
 }
 
 install_fim_library() {
-    info "Installing FIM Python library"
-    mkdir -p "$LIB_DIR"
-    rm -rf "$LIB_DIR/fim"
-    cp -R "$SRC_DIR/fim" "$LIB_DIR/fim"
-    find "$LIB_DIR/fim" -type d -exec chmod 755 {} \;
-    find "$LIB_DIR/fim" -type f -exec chmod 644 {} \;
-    chown -R root:root "$LIB_DIR/fim"
+    install_library_module "fim"
 }
 
 install_library() {
