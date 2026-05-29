@@ -12,11 +12,12 @@ from common.constants import (  # noqa: F401  — backward compat re-export
     INSTALL_STATUS_DIR,
     INSTALL_STATUS_FILE,
 )
-from common.notify_config import NotifyEmail, NotifySlack  # noqa: F401
+from common.notify_config import NotifyEmail, NotifySlack  # noqa: F401 — backward compat re-export
+from common.notify_config import parse_notify_channels, validate_notify_channels
 from common.exceptions import FimConfigError
 
 # FIM-specific constants (not shared with malware)
-DEFAULT_STATE_DB        = "/etc/eccube-fim/state.db"
+DEFAULT_STATE_DB        = f"{DEFAULT_CONFIG_DIR}/state.db"
 DEFAULT_HEARTBEAT_FILE  = "/run/eccube-fim/heartbeat"
 DEFAULT_SUPPRESS_HOURS  = 1
 INSTALL_TIMER_NAME      = "eccube-fim-check.timer"
@@ -62,35 +63,17 @@ def _validate(main: dict, targets: dict, notify: dict) -> None:
         raise FimConfigError("daemon.yaml: missing required key 'root_path'")
     if not targets.get("target_files"):
         raise FimConfigError("targets.yaml: 'target_files' is required and must not be empty")
-    ec = notify.get("email", {})
-    email_on = ec.get("enabled", True)
-    if email_on and not ec.get("smtp_host"):
-        raise FimConfigError("notify.yaml: email.smtp_host is required when email is enabled")
-    slack_on = notify.get("slack", {}).get("enabled", False)
-    if not email_on and not slack_on:
-        raise FimConfigError("notify.yaml: at least one notification channel must be enabled")
+    validate_notify_channels(notify)
 
 
 def _parse(main: dict, targets: dict, notify: dict) -> Config:
-    ec = notify.get("email", {})
-    sc = notify.get("slack", {})
+    email, slack = parse_notify_channels(notify)
     hb = main.get("heartbeat", {})
     return Config(
         root_path=main["root_path"],
         target_files=targets.get("target_files", []),
-        email=NotifyEmail(
-            smtp_host=ec.get("smtp_host", ""),
-            smtp_port=ec.get("smtp_port", DEFAULT_SMTP_PORT),
-            smtp_user=ec.get("smtp_user", ""),
-            smtp_password_file=ec.get("smtp_password_file", ""),
-            from_addr=ec.get("from", ""),
-            recipients=ec.get("recipients", []),
-            enabled=ec.get("enabled", True),
-        ),
-        slack=NotifySlack(
-            enabled=sc.get("enabled", False),
-            webhook_url_files=sc.get("webhook_url_files", []),
-        ),
+        email=email,
+        slack=slack,
         suppress_window_hours=targets.get("deduplication", {}).get(
             "suppress_window_hours", DEFAULT_SUPPRESS_HOURS),
         state_db=main.get("state_db", DEFAULT_STATE_DB),

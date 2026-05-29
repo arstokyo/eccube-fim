@@ -1,3 +1,6 @@
+# known: intentional specialisation vs common/notify_setup.py — fim setup requires
+# TTY check, email validation, secure_write (chmod 0600), and post-write config
+# validation. Do not replace with common/ version without porting all features.
 # known: 156 lines — _validate_email + _validate_email_inputs must stay co-located with _collect_email
 import getpass
 import os

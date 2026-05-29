@@ -112,6 +112,7 @@ def _install_release(version: str, yes: bool, config_dir: str) -> int:
     return 0
 
 
+# known: near-duplicate of malware/upgrade.upgrade — see ARCH-040 for extraction plan
 def upgrade(yes: bool = False, force: bool = False, migrate_only: bool = False,
             config_dir: str = DEFAULT_CONFIG_DIR) -> int:
     """Download latest release and replace library + binary. Raises SystemExit(1) on Python mismatch."""

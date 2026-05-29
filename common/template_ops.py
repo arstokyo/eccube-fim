@@ -122,3 +122,18 @@ def load_template(name: str, builtin_dir: Path,
         if candidate.exists():
             return string.Template(candidate.read_text(encoding="utf-8"))
     return string.Template((builtin_dir / name).read_text(encoding="utf-8"))
+
+
+def preview_rendered(subject: str, email_body: str, slack_body: str) -> int:
+    """Print SUBJECT / EMAIL BODY / SLACK BODY sections with separator lines. Return 0."""
+    for label, body in [
+        ("SUBJECT", subject),
+        ("EMAIL BODY", email_body),
+        ("SLACK BODY", slack_body),
+    ]:
+        print("=" * 60)
+        print(label)
+        print("=" * 60)
+        print(body)
+        print()
+    return 0

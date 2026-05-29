@@ -5,6 +5,7 @@ from common.template_ops import (
     show_template_impl,
     edit_template_impl,
     reset_template_impl,
+    preview_rendered,
 )
 from fim._template_data import _REQUIRED_VARS, _SAMPLE_DETECTIONS
 from fim.template import (
@@ -38,18 +39,8 @@ def reset_template(config_dir: str, name: str) -> int:
 def preview_template(config_dir: str) -> int:
     """Render all templates with sample data and print the result."""
     hostname = socket.gethostname()
-    print("=" * 60)
-    print("SUBJECT")
-    print("=" * 60)
-    print(render_subject(hostname, config_dir))
-    print()
-    print("=" * 60)
-    print("EMAIL BODY")
-    print("=" * 60)
-    print(render_email_body(hostname, _SAMPLE_DETECTIONS, config_dir))
-    print()
-    print("=" * 60)
-    print("SLACK BODY")
-    print("=" * 60)
-    print(render_slack_body(hostname, _SAMPLE_DETECTIONS, config_dir))
-    return 0
+    return preview_rendered(
+        render_subject(hostname, config_dir),
+        render_email_body(hostname, _SAMPLE_DETECTIONS, config_dir),
+        render_slack_body(hostname, _SAMPLE_DETECTIONS, config_dir),
+    )
