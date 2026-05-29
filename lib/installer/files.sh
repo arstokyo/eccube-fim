@@ -86,11 +86,6 @@ install_fim_library() {
     install_library_module "fim"
 }
 
-install_library() {
-    install_common_library
-    install_fim_library
-}
-
 install_version_stamp() {
     info "Writing version stamp (${VERSION#v})"
     printf '%s\n' "${VERSION#v}" > "$CONFIG_DIR/.version"
