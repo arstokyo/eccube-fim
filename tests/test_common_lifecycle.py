@@ -92,3 +92,61 @@ def test_remove_common_leaves_lib_dir_when_not_empty(tmp_path):
     assert not (lib / "common").exists()
     assert (lib / "malware").exists()
     assert lib.exists()   # lib itself kept because malware/ is still there
+
+
+# ---------------------------------------------------------------------------
+# fim_installed
+# ---------------------------------------------------------------------------
+
+def test_fim_installed_true_when_fim_lib_present(tmp_path):
+    lib = tmp_path / "lib"
+    (lib / "fim").mkdir(parents=True)
+    assert cl.fim_installed(str(lib), str(tmp_path / "no-fim-bin")) is True
+
+
+def test_fim_installed_true_when_fim_bin_present(tmp_path):
+    lib = tmp_path / "lib"
+    lib.mkdir()
+    fim_bin = tmp_path / "eccube-fim"
+    fim_bin.write_text("")
+    assert cl.fim_installed(str(lib), str(fim_bin)) is True
+
+
+def test_fim_installed_false_when_both_absent(tmp_path):
+    lib = tmp_path / "lib"
+    lib.mkdir()
+    assert cl.fim_installed(str(lib), str(tmp_path / "no-fim-bin")) is False
+
+
+# ---------------------------------------------------------------------------
+# remove_common_if_fim_absent
+# ---------------------------------------------------------------------------
+
+def test_remove_common_if_fim_absent_retains_when_fim_lib_present(tmp_path, capsys):
+    lib = tmp_path / "lib"
+    (lib / "fim").mkdir(parents=True)
+    (lib / "common").mkdir()
+    cl.remove_common_if_fim_absent(str(lib), str(tmp_path / "no-fim-bin"))
+    assert (lib / "common").exists()
+    assert "retained" in capsys.readouterr().out
+
+
+def test_remove_common_if_fim_absent_retains_when_fim_bin_present(tmp_path, capsys):
+    lib = tmp_path / "lib"
+    lib.mkdir()
+    (lib / "common").mkdir()
+    fim_bin = tmp_path / "eccube-fim"
+    fim_bin.write_text("")
+    cl.remove_common_if_fim_absent(str(lib), str(fim_bin))
+    assert (lib / "common").exists()
+    assert "retained" in capsys.readouterr().out
+
+
+def test_remove_common_if_fim_absent_cleans_when_fim_absent(tmp_path, capsys):
+    lib = tmp_path / "lib"
+    lib.mkdir()
+    (lib / "common").mkdir()
+    cl.remove_common_if_fim_absent(str(lib), str(tmp_path / "no-fim-bin"))
+    assert not (lib / "common").exists()
+    assert not lib.exists()    # empty lib dir removed
+    assert "removed" in capsys.readouterr().out

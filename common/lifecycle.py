@@ -45,3 +45,20 @@ def remove_common_if_no_companion(lib_dir: str, companion_marker: str) -> None:
     lib = Path(lib_dir)
     if lib.is_dir() and not any(lib.iterdir()):
         lib.rmdir()
+
+
+def fim_installed(lib_dir: str, fim_bin: str) -> bool:
+    """Return True when eccube-fim is still installed (lib subdir OR binary present)."""
+    return (Path(lib_dir) / "fim").is_dir() or Path(fim_bin).exists()
+
+
+def remove_common_if_fim_absent(lib_dir: str, fim_bin: str) -> None:
+    """Remove common/ and lib_dir (if empty) when FIM is no longer installed."""
+    if fim_installed(lib_dir, fim_bin):
+        print("common/ retained — eccube-fim is still installed.")
+        return
+    shutil.rmtree(Path(lib_dir) / "common", ignore_errors=True)
+    lib = Path(lib_dir)
+    if lib.is_dir() and not any(lib.iterdir()):
+        lib.rmdir()
+    print("common/ removed — no companion tool installed.")
