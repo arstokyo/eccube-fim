@@ -4,21 +4,16 @@ import sys
 import tempfile
 from pathlib import Path
 
+from common.constants import INSTALL_MALWARE_BIN as _MALWARE_BIN
 from common.upgrade import (
-    fetch_release_info as _fetch_release_info,
-    check_python_requires as _check_python_requires,
     download_tarball as _download_tarball,
     find_extracted_root as _find_extracted_root,
     write_version_stamp as _write_version_stamp,
     confirm_co_upgrade as _confirm_co_upgrade,
     migrate_only as _migrate_only_impl,
+    run_upgrade as _run_upgrade,
 )
 from fim.config import INSTALL_SBIN_DIR, INSTALL_LIB_DIR, DEFAULT_CONFIG_DIR
-from fim.lifecycle import _require_root
-from fim.version import read_installed_version
-
-# known: duplicate of malware/lifecycle._MALWARE_BIN — cannot import across boundary (ARCH-017)
-_MALWARE_BIN = "/usr/local/sbin/eccube-malware"
 
 
 def _run_migrations(config_dir: str) -> int:
@@ -112,24 +107,8 @@ def _install_release(version: str, yes: bool, config_dir: str) -> int:
     return 0
 
 
-# known: near-duplicate of malware/upgrade.upgrade — see ARCH-040 for extraction plan
 def upgrade(yes: bool = False, force: bool = False, migrate_only: bool = False,
             config_dir: str = DEFAULT_CONFIG_DIR) -> int:
     """Download latest release and replace library + binary. Raises SystemExit(1) on Python mismatch."""
-    if not _require_root():
-        return 1
-    if migrate_only:
-        return _migrate_only(config_dir)
-    try:
-        version, python_requires = _fetch_release_info()
-    except RuntimeError as e:
-        print(f"Error: {e}", file=sys.stderr)
-        return 1
-    _check_python_requires(python_requires)
-    installed = read_installed_version(config_dir)
-    latest_clean = version.lstrip("v")
-    if latest_clean == installed and not force:
-        print(f"Already at the latest version ({installed}) — nothing to do.")
-        print("Use --force to reinstall anyway.")
-        return 0
-    return _install_release(version, yes, config_dir)
+    return _run_upgrade(config_dir, yes, force, migrate_only,
+                        _install_release, _migrate_only)

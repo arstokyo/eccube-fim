@@ -3,9 +3,11 @@ import os
 import pytest
 from contextlib import ExitStack
 from unittest.mock import patch, MagicMock
+from common.upgrade import (
+    check_python_requires as _check_python_requires,
+    fetch_release_info as _fetch_release_info,
+)
 from fim.upgrade import (
-    _check_python_requires,
-    _fetch_release_info,
     _find_extracted_root,
     upgrade,
 )
@@ -105,7 +107,7 @@ def test_find_extracted_root_ignores_files(tmp_path):
 def test_upgrade_skips_when_already_at_latest(monkeypatch, tmp_path, capsys):
     (tmp_path / ".version").write_text("1.0.0\n")
     monkeypatch.setattr("os.geteuid", lambda: 0)
-    with patch("fim.upgrade._fetch_release_info", return_value=("v1.0.0", "")):
+    with patch("common.upgrade.fetch_release_info", return_value=("v1.0.0", "")):
         result = upgrade(yes=True, config_dir=str(tmp_path))
     assert result == 0
     out = capsys.readouterr().out
@@ -116,7 +118,7 @@ def test_upgrade_skips_when_already_at_latest(monkeypatch, tmp_path, capsys):
 def test_upgrade_skips_suggests_force(monkeypatch, tmp_path, capsys):
     (tmp_path / ".version").write_text("1.0.0\n")
     monkeypatch.setattr("os.geteuid", lambda: 0)
-    with patch("fim.upgrade._fetch_release_info", return_value=("v1.0.0", "")):
+    with patch("common.upgrade.fetch_release_info", return_value=("v1.0.0", "")):
         upgrade(yes=True, config_dir=str(tmp_path))
     assert "--force" in capsys.readouterr().out
 
@@ -149,7 +151,7 @@ def test_upgrade_proceeds_when_force_and_same_version(monkeypatch, tmp_path, cap
     monkeypatch.setattr("fim.upgrade.INSTALL_LIB_DIR", str(tmp_path))
     monkeypatch.setattr("fim.upgrade.INSTALL_SBIN_DIR", str(tmp_path))
     with ExitStack() as stack:
-        stack.enter_context(patch("fim.upgrade._fetch_release_info", return_value=("v1.0.0", "")))
+        stack.enter_context(patch("common.upgrade.fetch_release_info", return_value=("v1.0.0", "")))
         _patch_install(stack, str(tmp_path))
         result = upgrade(yes=True, force=True, config_dir=str(tmp_path))
     assert result == 0
@@ -161,7 +163,7 @@ def test_upgrade_proceeds_when_newer_version_available(monkeypatch, tmp_path, ca
     monkeypatch.setattr("fim.upgrade.INSTALL_LIB_DIR", str(tmp_path))
     monkeypatch.setattr("fim.upgrade.INSTALL_SBIN_DIR", str(tmp_path))
     with ExitStack() as stack:
-        stack.enter_context(patch("fim.upgrade._fetch_release_info", return_value=("v1.1.0", "")))
+        stack.enter_context(patch("common.upgrade.fetch_release_info", return_value=("v1.1.0", "")))
         _patch_install(stack, str(tmp_path))
         result = upgrade(yes=True, config_dir=str(tmp_path))
     assert result == 0
@@ -173,7 +175,7 @@ def test_upgrade_does_not_write_stamp_when_migration_fails(monkeypatch, tmp_path
     monkeypatch.setattr("fim.upgrade.INSTALL_LIB_DIR", str(tmp_path))
     monkeypatch.setattr("fim.upgrade.INSTALL_SBIN_DIR", str(tmp_path))
     with ExitStack() as stack:
-        stack.enter_context(patch("fim.upgrade._fetch_release_info",
+        stack.enter_context(patch("common.upgrade.fetch_release_info",
                                   return_value=("v1.1.0", "")))
         stack.enter_context(patch("fim.upgrade._download_tarball"))
         stack.enter_context(patch("fim.upgrade._find_extracted_root",
@@ -208,7 +210,7 @@ def test_migrate_only_calls_run_migrations(tmp_path):
     config_dir = str(tmp_path)
     (tmp_path / ".version").write_text("1.0.0\n", encoding="utf-8")
 
-    with patch("fim.upgrade._require_root", return_value=True), \
+    with patch("common.upgrade.require_root", return_value=True), \
          patch("fim.upgrade._run_migrations", return_value=2) as mock_mig, \
          patch("common.upgrade.fetch_release_info", return_value=("v1.0.0", "")), \
          patch("common.upgrade.write_version_stamp") as mock_stamp, \
@@ -223,7 +225,7 @@ def test_migrate_only_calls_run_migrations(tmp_path):
 
 def test_migrate_only_returns_1_on_failure(tmp_path, capsys):
     config_dir = str(tmp_path)
-    with patch("fim.upgrade._require_root", return_value=True), \
+    with patch("common.upgrade.require_root", return_value=True), \
          patch("fim.upgrade._run_migrations", side_effect=RuntimeError("bad")):
         rc = upgrade(migrate_only=True, config_dir=config_dir)
     assert rc == 1
@@ -234,9 +236,9 @@ def test_migrate_only_no_network_leaves_stamp_unchanged(tmp_path):
     """When GitHub is unreachable, stamp is left unchanged (next upgrade finds no migrations)."""
     config_dir = str(tmp_path)
     (tmp_path / ".version").write_text("1.2.3\n", encoding="utf-8")
-    with patch("fim.upgrade._require_root", return_value=True), \
+    with patch("common.upgrade.require_root", return_value=True), \
          patch("fim.upgrade._run_migrations", return_value=0), \
-         patch("fim.upgrade._fetch_release_info", side_effect=RuntimeError("no net")), \
+         patch("common.upgrade.fetch_release_info", side_effect=RuntimeError("no net")), \
          patch("fim.upgrade._write_version_stamp") as mock_stamp:
         rc = upgrade(migrate_only=True, config_dir=config_dir)
     assert rc == 0
@@ -454,7 +456,7 @@ def test_fim_upgrade_co_install_prompts_before_companion_upgrade(monkeypatch, tm
     monkeypatch.setattr("fim.upgrade.INSTALL_LIB_DIR", str(tmp_path / "lib"))
     (tmp_path / "lib" / "malware").mkdir(parents=True)  # simulate co-install
 
-    with patch("fim.upgrade._fetch_release_info", return_value=("v1.2.0", "")), \
+    with patch("common.upgrade.fetch_release_info", return_value=("v1.2.0", "")), \
          patch("fim.upgrade._download_tarball") as mock_dl, \
          patch("builtins.input", return_value="n"):
         result = upgrade(yes=False, config_dir=str(tmp_path))
@@ -476,7 +478,7 @@ def test_fim_upgrade_yes_allows_co_upgrade_without_prompt(monkeypatch, tmp_path)
     monkeypatch.setattr("fim.upgrade.INSTALL_SBIN_DIR", str(tmp_path / "sbin"))
     monkeypatch.setattr("fim.upgrade._MALWARE_BIN", str(tmp_path / "sbin" / "eccube-malware"))
 
-    with patch("fim.upgrade._fetch_release_info", return_value=("v1.2.0", "")), \
+    with patch("common.upgrade.fetch_release_info", return_value=("v1.2.0", "")), \
          patch("fim.upgrade._download_tarball"), \
          patch("fim.upgrade._find_extracted_root", return_value=str(tmp_path / "src")), \
          patch("fim.upgrade._replace_fim_libraries"), \

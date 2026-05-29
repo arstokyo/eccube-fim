@@ -255,14 +255,14 @@ def test_upgrade_errors_on_api_failure(monkeypatch, capsys):
     def _fail():
         raise RuntimeError("Could not reach GitHub releases API: timeout")
 
-    monkeypatch.setattr("fim.upgrade._fetch_release_info", _fail)
+    monkeypatch.setattr("common.upgrade.fetch_release_info", _fail)
     assert upgrade(yes=True) == 1
     assert "Error" in capsys.readouterr().err
 
 
 def test_upgrade_errors_on_incompatible_python(monkeypatch, capsys):
     monkeypatch.setattr("os.geteuid", lambda: 0)
-    monkeypatch.setattr("fim.upgrade._fetch_release_info",
+    monkeypatch.setattr("common.upgrade.fetch_release_info",
                         lambda: ("v2.0.0", ">=99.0"))
     with pytest.raises(SystemExit) as exc:
         upgrade(yes=True)
@@ -272,7 +272,7 @@ def test_upgrade_errors_on_incompatible_python(monkeypatch, capsys):
 
 def test_upgrade_cancels_on_no(monkeypatch, capsys):
     monkeypatch.setattr("os.geteuid", lambda: 0)
-    monkeypatch.setattr("fim.upgrade._fetch_release_info",
+    monkeypatch.setattr("common.upgrade.fetch_release_info",
                         lambda: ("v1.2.3", ">=3.9"))
     monkeypatch.setattr("builtins.input", lambda _: "n")
     assert upgrade(yes=False) == 1
@@ -310,7 +310,7 @@ def test_upgrade_replaces_files(monkeypatch, tmp_path):
     config_dir.mkdir()
 
     monkeypatch.setattr("os.geteuid", lambda: 0)
-    monkeypatch.setattr("fim.upgrade._fetch_release_info",
+    monkeypatch.setattr("common.upgrade.fetch_release_info",
                         lambda: ("v1.2.3", ">=3.9"))
     monkeypatch.setattr("fim.upgrade._download_tarball", fake_download)
     monkeypatch.setattr("fim.upgrade.INSTALL_LIB_DIR",  str(lib_dir))

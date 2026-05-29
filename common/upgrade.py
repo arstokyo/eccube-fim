@@ -9,7 +9,8 @@ from pathlib import Path
 from typing import Callable
 
 from common.constants import FETCH_TIMEOUT as _FETCH_TIMEOUT
-from common.version import REPO_SLUG, VERSION_CHECK_URL
+from common.lifecycle import require_root
+from common.version import REPO_SLUG, VERSION_CHECK_URL, read_installed_version
 
 
 def fetch_release_info() -> tuple[str, str]:
@@ -105,6 +106,33 @@ def migrate_only(config_dir: str, cli_name: str,
         # leave stamp unchanged — next upgrade run will find no pending migrations
         pass
     return 0
+
+
+def run_upgrade(config_dir: str, yes: bool, force: bool, migrate_only: bool,
+                install_release: Callable[[str, bool, str], int],
+                migrate_only_fn: Callable[[str], int]) -> int:
+    """Drive the standard upgrade flow shared by eccube-fim and eccube-malware.
+
+    `install_release(version, yes, config_dir)` and `migrate_only_fn(config_dir)`
+    are the tool-specific steps; the root check, release fetch, Python-version gate,
+    and already-current short-circuit are identical for both tools.
+    """
+    if not require_root():
+        return 1
+    if migrate_only:
+        return migrate_only_fn(config_dir)
+    try:
+        version, python_requires = fetch_release_info()
+    except RuntimeError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
+    check_python_requires(python_requires)
+    installed = read_installed_version(config_dir)
+    if version.lstrip("v") == installed and not force:
+        print(f"Already at the latest version ({installed}) — nothing to do.")
+        print("Use --force to reinstall anyway.")
+        return 0
+    return install_release(version, yes, config_dir)
 
 
 def confirm_co_upgrade(tool_name: str, companion: str, version: str, yes: bool) -> bool:
