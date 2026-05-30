@@ -71,13 +71,12 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: eccube-fim ${{ github.ref_name }}
+          # GitHub auto-generates the changelog ("What's Changed" + Full Changelog
+          # diff link) from commits since the previous tag; appended below body.
+          generate_release_notes: true
           body: |
             ## eccube-fim ${{ github.ref_name }}
 
-            See [CHANGELOG](https://github.com/arstokyo/eccube-fim/blob/main/CHANGELOG.md)
-            for details.
-
-            ---
             python_requires: ">=3.9"
           files: |
             eccube-common-${{ github.ref_name }}.tar.gz
