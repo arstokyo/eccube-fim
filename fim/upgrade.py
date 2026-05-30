@@ -2,7 +2,6 @@ import os
 import shutil
 import sys
 import tempfile
-from pathlib import Path
 
 from common.constants import INSTALL_MALWARE_BIN as _MALWARE_BIN
 from common.upgrade import (
@@ -12,6 +11,7 @@ from common.upgrade import (
     confirm_co_upgrade as _confirm_co_upgrade,
     migrate_only as _migrate_only_impl,
     run_upgrade as _run_upgrade,
+    run_companion_migrations as _run_companion_migrations,
 )
 from fim.config import INSTALL_SBIN_DIR, INSTALL_LIB_DIR, DEFAULT_CONFIG_DIR
 
@@ -41,13 +41,7 @@ def _replace_malware_companion(src: str) -> None:
 
 
 def _run_malware_migrations(config_dir: str) -> int:
-    # deferred import — loads new common/migration after disk replacement
-    from common.migration import MigrationRunner
-    return MigrationRunner(
-        db_path=str(Path(config_dir) / "malware_state.db"),  # installation convention for malware's state
-        migrations_dir=str(Path(INSTALL_LIB_DIR) / "malware" / "migrations"),
-        config_dir=config_dir,
-    ).run()
+    return _run_companion_migrations(config_dir, "malware_state.db", "malware")
 
 
 def _migrate_only(config_dir: str) -> int:

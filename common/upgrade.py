@@ -7,7 +7,7 @@ import urllib.request
 from pathlib import Path
 from typing import Callable
 
-from common.constants import FETCH_TIMEOUT as _FETCH_TIMEOUT
+from common.constants import FETCH_TIMEOUT as _FETCH_TIMEOUT, INSTALL_LIB_DIR
 from common.lifecycle import require_root
 from common.version import (
     REPO_SLUG,
@@ -83,6 +83,21 @@ def find_extracted_root(dest_dir: str) -> str:
 
 def write_version_stamp(config_dir: str, version: str) -> None:
     (Path(config_dir) / ".version").write_text(version.lstrip("v") + "\n", encoding="utf-8")
+
+
+def run_companion_migrations(config_dir: str, db_name: str, lib_subdir: str) -> int:
+    """Run the companion tool's migrations after its code was replaced on disk.
+
+    db_name:    companion's state DB filename under config_dir (e.g. "state.db").
+    lib_subdir: companion's package dir under INSTALL_LIB_DIR (e.g. "fim").
+    """
+    # deferred import — picks up the freshly-replaced common/migration on disk
+    from common.migration import MigrationRunner
+    return MigrationRunner(
+        db_path=str(Path(config_dir) / db_name),
+        migrations_dir=str(Path(INSTALL_LIB_DIR) / lib_subdir / "migrations"),
+        config_dir=config_dir,
+    ).run()
 
 
 def migrate_only(config_dir: str, cli_name: str,
