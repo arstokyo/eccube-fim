@@ -12,6 +12,8 @@ from common.upgrade import (
     migrate_only as _migrate_only_impl,
     run_upgrade as _run_upgrade,
     run_companion_migrations as _run_companion_migrations,
+    replace_primary as _replace_primary,
+    replace_companion as _replace_companion,
 )
 from fim.config import INSTALL_SBIN_DIR, INSTALL_LIB_DIR, DEFAULT_CONFIG_DIR
 
@@ -27,17 +29,11 @@ def _malware_installed() -> bool:
 
 
 def _replace_fim_libraries(src: str) -> None:
-    shutil.rmtree(os.path.join(INSTALL_LIB_DIR, "fim"), ignore_errors=True)
-    shutil.copytree(os.path.join(src, "fim"), os.path.join(INSTALL_LIB_DIR, "fim"))
-    shutil.rmtree(os.path.join(INSTALL_LIB_DIR, "common"), ignore_errors=True)
-    shutil.copytree(os.path.join(src, "common"), os.path.join(INSTALL_LIB_DIR, "common"))
+    _replace_primary(src, INSTALL_LIB_DIR, "fim")
 
 
 def _replace_malware_companion(src: str) -> None:
-    shutil.rmtree(os.path.join(INSTALL_LIB_DIR, "malware"), ignore_errors=True)
-    shutil.copytree(os.path.join(src, "malware"), os.path.join(INSTALL_LIB_DIR, "malware"))
-    shutil.copy2(os.path.join(src, "bin", "eccube-malware"), _MALWARE_BIN)
-    os.chmod(_MALWARE_BIN, 0o755)
+    _replace_companion(src, INSTALL_LIB_DIR, "malware", _MALWARE_BIN)
 
 
 def _run_malware_migrations(config_dir: str) -> int:

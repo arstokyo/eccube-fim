@@ -32,6 +32,14 @@ def remove_lib_subdir(lib_dir: str, subdir: str) -> None:
     shutil.rmtree(Path(lib_dir) / subdir, ignore_errors=True)
 
 
+def _purge_common(lib_dir: str) -> None:
+    """Remove common/ and lib_dir itself once lib_dir is left empty."""
+    shutil.rmtree(Path(lib_dir) / "common", ignore_errors=True)
+    lib = Path(lib_dir)
+    if lib.is_dir() and not any(lib.iterdir()):
+        lib.rmdir()
+
+
 def remove_common_if_no_companion(lib_dir: str, companion_marker: str) -> None:
     """Remove common/ and lib_dir (if empty) only when companion_marker is absent.
 
@@ -41,10 +49,7 @@ def remove_common_if_no_companion(lib_dir: str, companion_marker: str) -> None:
     if Path(companion_marker).exists():
         print("common/ retained — companion tool is still installed.")
         return
-    shutil.rmtree(Path(lib_dir) / "common", ignore_errors=True)
-    lib = Path(lib_dir)
-    if lib.is_dir() and not any(lib.iterdir()):
-        lib.rmdir()
+    _purge_common(lib_dir)
 
 
 def fim_installed(lib_dir: str, fim_bin: str) -> bool:
@@ -57,8 +62,5 @@ def remove_common_if_fim_absent(lib_dir: str, fim_bin: str) -> None:
     if fim_installed(lib_dir, fim_bin):
         print("common/ retained — eccube-fim is still installed.")
         return
-    shutil.rmtree(Path(lib_dir) / "common", ignore_errors=True)
-    lib = Path(lib_dir)
-    if lib.is_dir() and not any(lib.iterdir()):
-        lib.rmdir()
+    _purge_common(lib_dir)
     print("common/ removed — no companion tool installed.")

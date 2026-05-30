@@ -1,87 +1,148 @@
+import getpass
+import os
 import sys
-from pathlib import Path
+from typing import Callable
 
 import yaml
 
-from common.constants import DEFAULT_CONFIG_DIR, DEFAULT_SMTP_PORT
+from common.constants import DEFAULT_SMTP_PORT
 
 
-def setup_notify_interactive(config_dir: str) -> int:
-    """Prompt the user to configure email / Slack in notify.yaml.
+def _require_tty() -> bool:
+    if not sys.stdin.isatty():
+        print(
+            "setup-notify requires an interactive terminal.\n"
+            "Alternative: run 'sudo bash install.sh --reconfigure'",
+            file=sys.stderr,
+        )
+        return False
+    return True
 
-    Return 0 on success, 1 on error.
-    """
-    notify_path = Path(config_dir) / "notify.yaml"
+
+def _prompt(label: str, default: str = "", secret: bool = False) -> str:
+    display = f"{label} [{default}]: " if default else f"{label}: "
+    if secret:
+        return getpass.getpass(display) or default
+    return input(display).strip() or default
+
+
+def _ask_yes_no(question: str, default_yes: bool = False) -> bool:
+    hint = "[Y/n]" if default_yes else "[y/N]"
+    answer = input(f"{question} {hint}: ").strip().lower()
+    if not answer:
+        return default_yes
+    return answer == "y"
+
+
+def _secure_write(path: str, content: str) -> None:
+    # os.open sets mode 0600 before any bytes land on disk — no TOCTOU window
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.write(content)
     try:
-        existing: dict = yaml.safe_load(notify_path.read_text(encoding="utf-8")) or {}
+        os.chown(path, 0, 0)
     except OSError:
-        existing = {}
+        pass  # not running as root in tests; mode 0600 is already applied
 
-    print("=== Notification setup wizard ===")
-    result: dict = {}
-    result["email"] = _prompt_email(existing.get("email") or {})
-    result["slack"] = _prompt_slack(existing.get("slack") or {})
 
-    try:
-        notify_path.write_text(yaml.dump(result, allow_unicode=True, sort_keys=False),
-                               encoding="utf-8")
-        print(f"Saved: {notify_path}")
-    except OSError as e:
-        print(f"Error writing {notify_path}: {e}", file=sys.stderr)
+def _validate_email(addr: str) -> None:
+    # full RFC 5321 parsing would reject valid addresses; structural check suffices
+    parts = addr.split("@")
+    if len(parts) != 2 or not parts[0] or not parts[1]:
+        raise ValueError(f"Invalid email address: {addr!r}")
+
+
+def _validate_email_inputs(smtp_host: str, smtp_port: str, from_addr: str, recipients: list[str]) -> None:
+    if not smtp_host:
+        raise ValueError("SMTP host is required")
+    if not smtp_port.isdigit():
+        raise ValueError("SMTP port must be a number")
+    _validate_email(from_addr)
+    if not recipients:
+        raise ValueError("At least one recipient is required")
+    for r in recipients:
+        _validate_email(r)
+
+
+def _collect_email(config_dir: str) -> dict[str, object]:
+    print("\n=== Email credentials ===")
+    smtp_host = _prompt("SMTP host")
+    smtp_port = _prompt("SMTP port", str(DEFAULT_SMTP_PORT))
+    smtp_user = _prompt("SMTP user")
+    smtp_password = _prompt("SMTP password", secret=True)
+    from_addr = _prompt("From address", smtp_user)
+    rcpt_raw = _prompt("Recipients (comma-separated)")
+    recipients = [r.strip() for r in rcpt_raw.split(",") if r.strip()]
+    _validate_email_inputs(smtp_host, smtp_port, from_addr, recipients)
+    password_file = os.path.join(config_dir, "smtp.password")
+    _secure_write(password_file, smtp_password)
+    print(f"Written {password_file} (chmod 600)")
+    return {
+        "enabled": True,
+        "smtp_host": smtp_host,
+        "smtp_port": int(smtp_port),
+        "smtp_user": smtp_user,
+        "smtp_password_file": password_file,
+        "from": from_addr,
+        "recipients": recipients,
+    }
+
+
+def _collect_slack(config_dir: str) -> dict[str, object]:
+    print("\n=== Slack webhooks ===")
+    webhook_files = []
+    i = 1
+    while True:
+        wh = _prompt(f"Slack webhook URL {i} (empty to stop)")
+        if not wh:
+            break
+        wh_file = os.path.join(config_dir, f"slack-{i}.webhook")
+        _secure_write(wh_file, wh)
+        print(f"Written {wh_file} (chmod 600)")
+        webhook_files.append(wh_file)
+        i += 1
+    return {"enabled": bool(webhook_files), "webhook_url_files": webhook_files}
+
+
+def _load_raw_notify(notify_path: str) -> dict[str, object]:
+    if not os.path.exists(notify_path):
+        return {"email": {"enabled": False}, "slack": {"enabled": False}}
+    with open(notify_path, encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+    return data if isinstance(data, dict) else {}
+
+
+def _print_notify_status(data: dict[str, object]) -> None:
+    email_on = data.get("email", {}).get("enabled", True)
+    slack_on = data.get("slack", {}).get("enabled", False)
+    print("\nCurrent status:")
+    print(f"  email : {'enabled' if email_on else 'disabled'}")
+    print(f"  slack : {'enabled' if slack_on else 'disabled'}")
+
+
+def setup_notify_interactive(config_dir: str, validate_fn: Callable[[str], int]) -> int:
+    """Interactive wizard to configure email and Slack notification channels.
+
+    validate_fn loads the freshly written config and prints a validation report,
+    returning 0 when valid — it differs per tool (fim vs malware config schema).
+    """
+    if not _require_tty():
         return 1
-    return 0
-
-
-def _prompt_email(current: dict) -> dict:
-    enabled = _yes_no("Enable email notifications?", current.get("enabled", False))
-    if not enabled:
-        return {"enabled": False}
-    # Key names must match notify.yaml structure consumed by _parse() in both config modules
-    # STARTTLS is always enforced by EmailChannel — no use_tls toggle exposed here
-    return {
-        "enabled":            True,
-        "smtp_host":          _ask("SMTP host", current.get("smtp_host", "")),
-        "smtp_port":          _safe_int(_ask("SMTP port",
-                                              str(current.get("smtp_port", DEFAULT_SMTP_PORT))),
-                                         DEFAULT_SMTP_PORT),
-        "smtp_user":          _ask("SMTP user (blank = no auth)", current.get("smtp_user", "")),
-        "smtp_password_file": _ask("SMTP password file",
-                                   current.get("smtp_password_file",
-                                               f"{DEFAULT_CONFIG_DIR}/smtp.password")),
-        "from":               _ask("From address", current.get("from", "")),
-        "recipients":         [_ask("To address",
-                                    (current.get("recipients") or [""])[0])],
-    }
-
-
-def _prompt_slack(current: dict) -> dict:
-    enabled = _yes_no("Enable Slack notifications?", current.get("enabled", False))
-    if not enabled:
-        return {"enabled": False}
-    existing_files = current.get("webhook_url_files") or [f"{DEFAULT_CONFIG_DIR}/slack.webhook"]
-    return {
-        "enabled":           True,
-        "webhook_url_files": [_ask("Webhook URL file path", existing_files[0])],
-    }
-
-
-def _safe_int(value: str, default: int) -> int:
+    notify_path = os.path.join(config_dir, "notify.yaml")
+    data = _load_raw_notify(notify_path)
+    _print_notify_status(data)
     try:
-        return int(value)
-    except ValueError:
-        print(f"  Invalid value {value!r} — using {default}", file=sys.stderr)
-        return default
-
-
-def _ask(prompt: str, default: str) -> str:
-    suffix = f" [{default}]" if default else ""
-    value = input(f"  {prompt}{suffix}: ").strip()
-    return value or default
-
-
-def _yes_no(prompt: str, default: bool) -> bool:
-    suffix = "[Y/n]" if default else "[y/N]"
-    ans = input(f"  {prompt} {suffix}: ").strip().lower()
-    if not ans:
-        return default
-    return ans.startswith("y")
+        if _ask_yes_no("\nConfigure email?"):
+            data["email"] = _collect_email(config_dir)
+        else:
+            print("Email unchanged.")
+        if _ask_yes_no("Configure Slack?"):
+            data["slack"] = _collect_slack(config_dir)
+        else:
+            print("Slack unchanged.")
+    except (ValueError, KeyboardInterrupt) as e:
+        print(f"\nAborted: {e}", file=sys.stderr)
+        return 1
+    _secure_write(notify_path, yaml.dump(data, allow_unicode=True, default_flow_style=False))
+    print(f"\nWritten {notify_path}")
+    return validate_fn(config_dir)

@@ -1,3 +1,6 @@
+# known: 185 lines — cohesive shared-upgrade orchestration (release fetch, tarball
+# extraction, module/binary replacement, migrations, co-upgrade confirmation);
+# splitting would fragment one release flow across files for no clarity gain
 import json
 import os
 import shutil
@@ -79,6 +82,28 @@ def find_extracted_root(dest_dir: str) -> str:
     if len(entries) != 1:
         raise RuntimeError(f"Unexpected tarball layout in {dest_dir}: {entries}")
     return os.path.join(dest_dir, entries[0])
+
+
+def replace_module(src: str, lib_dir: str, subdir: str) -> None:
+    """Replace lib_dir/subdir with the freshly extracted copy from src/subdir."""
+    shutil.rmtree(os.path.join(lib_dir, subdir), ignore_errors=True)
+    shutil.copytree(os.path.join(src, subdir), os.path.join(lib_dir, subdir))
+
+
+def replace_primary(src: str, lib_dir: str, subdir: str) -> None:
+    """Replace the running tool's own module plus the shared common/ package."""
+    replace_module(src, lib_dir, subdir)
+    replace_module(src, lib_dir, "common")
+
+
+def replace_companion(src: str, lib_dir: str, subdir: str, bin_dst: str) -> None:
+    """Replace the companion tool's module and refresh its CLI binary.
+
+    common/ is left untouched — the primary replacement already refreshed it.
+    """
+    replace_module(src, lib_dir, subdir)
+    shutil.copy2(os.path.join(src, "bin", os.path.basename(bin_dst)), bin_dst)
+    os.chmod(bin_dst, 0o755)
 
 
 def write_version_stamp(config_dir: str, version: str) -> None:
