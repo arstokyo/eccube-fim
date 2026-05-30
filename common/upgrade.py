@@ -44,7 +44,7 @@ def check_python_requires(requires: str) -> None:
     if python_meets(requires):
         return
     running = f"{sys.version_info.major}.{sys.version_info.minor}"
-    needed = ".".join(str(x) for x in requires.lstrip(">=").split("."))
+    needed = requires.lstrip(">=")
     print(f"Error: this release requires Python {needed}+ (you have {running}).",
           file=sys.stderr)
     print("You are already on the latest version compatible with your Python.",
