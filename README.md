@@ -56,7 +56,12 @@ The installer will:
 - Install ClamAV (`clamscan`, `freshclam`) for your OS
 - Copy `eccube-malware` to `/usr/local/sbin/`
 - Create `/etc/eccube-fim/malware.yaml` (edit scan paths before use)
-- Enable `clamav-scan.timer` (daily 03:00) and `clamav-freshclam.timer` (every 3h)
+- Enable three systemd timers:
+  - `clamav-scan.timer` — daily 03:00 (the malware scan)
+  - `clamav-freshclam.timer` — every 3h (signature database update)
+  - `clamav-autoupdate.timer` — daily 01:30 (ClamAV package upgrade via the OS
+    package manager; suppresses the distro's own freshclam unit to avoid a
+    competing updater)
 - Run an initial `freshclam` signature update
 
 After install, edit the scan targets and verify:
@@ -245,6 +250,10 @@ Managed via `config target`; persisted to `/etc/eccube-fim/malware.yaml`.
 |---|---|
 | `eccube-malware clamav status` | Show installed and available ClamAV version |
 | `eccube-malware clamav upgrade` | Upgrade ClamAV to the latest version via the OS package manager |
+
+`clamav upgrade` is also run automatically each day by `clamav-autoupdate.timer`
+(01:30). After a successful auto-update the distro's stock `freshclam` unit is
+suppressed so it does not compete with `clamav-freshclam.timer`.
 
 ### Lifecycle
 

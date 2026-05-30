@@ -25,11 +25,11 @@ no single responsible tool.
 | `common/exceptions.py` | `FimConfigError` | both config loaders |
 | `common/utils.py` | `JST` timezone constant | anywhere a timestamp is formatted |
 | `common/log.py` | `setup_logging(verbose)` | both CLI entry points |
-| `common/version.py` | `__version__`, `REPO_SLUG`, `warn_if_update()` | both CLIs at startup |
+| `common/version.py` | `__version__`, `REPO_SLUG`, `warn_if_update()`, `read_installed_version()`, `parse_python_requires()`, `python_meets()` | both CLIs at startup |
 | `common/config.py` | `load_yaml(path)` — strict YAML loader, raises `FimConfigError` on missing/invalid | both `config.py` loaders |
 | `common/db.py` | `@db_transaction` decorator | both `db.py` modules |
 | `common/migration.py` | `MigrationRunner(db_path, migrations_dir, config_dir)` | both migration wrappers |
-| `common/notify_config.py` | `NotifyEmail`, `NotifySlack` dataclasses; `print_secrets_status()` | embedded in `Config` and `MalwareConfig`; both `validate.py` |
+| `common/notify_config.py` | `NotifyEmail`, `NotifySlack` dataclasses; `print_secrets_status()`, `parse_notify_channels()`, `validate_notify_channels()` | embedded in `Config` and `MalwareConfig`; both `config.py` loaders and `validate.py` |
 | `common/notify/__init__.py` | `NotifyConfigLike` Protocol, `_REGISTRY`, `build_channels()`, `send_safe()` | both `dispatch_*` functions |
 | `common/notify/base.py` | `Channel` Protocol, `RenderedNotification` dataclass | all notify modules |
 | `common/notify/email.py` | `EmailChannel` | via `build_channels()` |
@@ -37,8 +37,8 @@ no single responsible tool.
 | `common/notify_setup.py` | `setup_notify_interactive()` | both `config setup-notify` commands |
 | `common/editor.py` | `file_hash()`, `open_in_editor()` | both `editor.py` modules |
 | `common/template_ops.py` | `load_template()`, `resolve_template()`, `validate_template_vars()`, `unknown_template()` | both `template.py` and `template_ops.py` modules |
-| `common/upgrade.py` | `fetch_release_info()`, `download_tarball()`, `migrate_only()`, `confirm_co_upgrade()`, `write_version_stamp()` | both `upgrade.py` modules |
-| `common/lifecycle.py` | `require_root()`, `stop_and_disable_units()`, `remove_unit_files()`, `remove_lib_subdir()`, `remove_common_if_no_companion()` | both `lifecycle.py` modules |
+| `common/upgrade.py` | `run_upgrade()` (full orchestration), `fetch_release_info()`, `check_python_requires()`, `download_tarball()`, `find_extracted_root()`, `run_companion_migrations()`, `migrate_only()`, `confirm_co_upgrade()`, `write_version_stamp()` | both `upgrade.py` modules |
+| `common/lifecycle.py` | `require_root()`, `stop_and_disable_units()`, `remove_unit_files()`, `remove_lib_subdir()`, `remove_common_if_no_companion()`, `fim_installed()`, `remove_common_if_fim_absent()` | both `lifecycle.py` modules |
 | `common/status.py` | `atomic_write_json()` — atomic file write with chmod 644 | both `status_writer.py` modules |
 
 ---
@@ -136,12 +136,18 @@ writes it and the malware installer skips (file already exists).
 | Malware install | installed | — | installed |
 | Both installed | installed (same files) | installed | installed |
 | FIM uninstall | kept if malware marker present; else removed | removed | unchanged |
-| Malware uninstall | always kept (FIM may depend on it) | unchanged | removed |
+| Malware uninstall | kept if FIM binary present; else removed | unchanged | removed |
 
-The FIM uninstaller (`fim/lifecycle.py`) checks for
-`/var/lib/eccube-fim/malware-installed` (`INSTALL_MALWARE_MARKER`) before
-removing `common/`. The malware uninstaller always retains `common/` because
-FIM's presence cannot be verified symmetrically from the malware side.
+Each uninstaller removes `common/` only when its companion tool is absent:
+
+- The FIM uninstaller (`fim/lifecycle.py`) calls `remove_common_if_no_companion()`,
+  which checks for the `/var/lib/eccube-fim/malware-installed` marker
+  (`INSTALL_MALWARE_MARKER`) before removing `common/`.
+- The malware uninstaller (`malware/lifecycle.py`) calls
+  `remove_common_if_fim_absent()`, which checks for the installed
+  `eccube-fim` binary (`INSTALL_FIM_BIN`) before removing `common/`.
+
+Whichever tool is uninstalled last takes `common/` with it.
 
 ---
 
