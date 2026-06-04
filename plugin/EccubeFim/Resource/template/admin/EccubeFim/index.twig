@@ -1,5 +1,14 @@
 {% extends '@admin/default_frame.twig' %}
 
+{% block stylesheet %}
+    {{ parent() }}
+    <style>
+        /* EC-CUBE admin theme sets color:#fff on .badge; restore contrast for affected variants */
+        .badge-secondary { background-color: #6c757d !important; color: #fff !important; }
+        .badge-warning   { background-color: #ffc107 !important; color: #212529 !important; }
+    </style>
+{% endblock %}
+
 {% block title %}{{ 'eccube_fim.title'|trans }}{% endblock %}
 {% block sub_title %}{{ 'eccube_fim.title'|trans }}{% endblock %}
 
