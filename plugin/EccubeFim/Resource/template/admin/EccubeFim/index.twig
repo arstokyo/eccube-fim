@@ -207,6 +207,13 @@
                             {% else %}
                                 <span class="text-danger">{{ 'eccube_fim.malware.label.inactive'|trans }}</span>
                             {% endif %}
+                            /
+                            {{ 'eccube_fim.malware.label.autoupdate_timer'|trans }}:
+                            {% if malware_status.autoupdate_timer_active %}
+                                <span class="text-success">{{ 'eccube_fim.malware.label.active'|trans }}</span>
+                            {% else %}
+                                <span class="text-danger">{{ 'eccube_fim.malware.label.inactive'|trans }}</span>
+                            {% endif %}
                         </small>
                     </div>
                 </div>
