@@ -73,6 +73,46 @@ eccube-malware test mail
 eccube-malware check --dry-run
 ```
 
+### Testing detection
+
+Use the [EICAR test file](https://www.eicar.org/download-anti-malware-testfile/) — a
+harmless, standardized string that every ClamAV installation is required to detect as
+`Eicar-Signature`. It contains no real malicious code.
+
+**1. Drop the test file into a scan target directory:**
+
+```bash
+echo 'X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*' \
+  > /var/www/html/eicar_test.com
+```
+
+**2. Run the scanner:**
+
+```bash
+# Dry-run — logs detection but skips notifications and DB writes
+eccube-malware check --dry-run
+
+# Full run — sends email/Slack alert and records to the suppression DB
+eccube-malware check
+```
+
+**3. Verify the detection was recorded:**
+
+```bash
+eccube-malware db list        # should show eicar_test.com
+eccube-malware status         # last scan result: INFECTED
+```
+
+**4. Clean up:**
+
+```bash
+rm /var/www/html/eicar_test.com
+eccube-malware db clear --file /var/www/html/eicar_test.com
+```
+
+After cleanup, the next scheduled scan will report clean and the suppression record
+is gone, so a real future detection will not be silently suppressed.
+
 ### Requirements
 
 - Root access
