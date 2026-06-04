@@ -1,8 +1,10 @@
+import io
 import os
 import shutil
 import sys
 import tarfile
 import pytest
+from common.upgrade import _safe_extractall
 from fim.lifecycle import uninstall
 from fim.upgrade import upgrade
 
@@ -296,10 +298,7 @@ def test_upgrade_replaces_files(monkeypatch, tmp_path):
     def fake_download(version: str, dest_dir: str) -> None:
         shutil.copy(str(archive), os.path.join(dest_dir, "eccube-fim.tar.gz"))
         with tarfile.open(os.path.join(dest_dir, "eccube-fim.tar.gz"), "r:gz") as tf:
-            if sys.version_info >= (3, 12):
-                tf.extractall(dest_dir, filter="data")
-            else:
-                tf.extractall(dest_dir)
+            _safe_extractall(tf, dest_dir)
         os.remove(os.path.join(dest_dir, "eccube-fim.tar.gz"))
 
     lib_dir = tmp_path / "lib"
@@ -321,3 +320,20 @@ def test_upgrade_replaces_files(monkeypatch, tmp_path):
     assert (lib_dir / "fim" / "cli.py").read_text() == "# updated"
     assert (sbin_dir / "eccube-fim").exists()
     assert (config_dir / ".version").read_text() == "1.2.3\n"
+
+
+def test_safe_extractall_rejects_path_traversal(tmp_path):
+    archive = tmp_path / "evil.tar.gz"
+    with tarfile.open(str(archive), "w:gz") as tf:
+        data = b"pwned"
+        info = tarfile.TarInfo(name="../escaped.txt")
+        info.size = len(data)
+        tf.addfile(info, io.BytesIO(data))
+
+    dest = tmp_path / "extract"
+    dest.mkdir()
+    with tarfile.open(str(archive), "r:gz") as tf:
+        with pytest.raises(RuntimeError, match="Unsafe tarball entry"):
+            _safe_extractall(tf, str(dest))
+
+    assert not (tmp_path / "escaped.txt").exists()

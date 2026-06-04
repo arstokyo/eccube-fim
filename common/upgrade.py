@@ -1,4 +1,4 @@
-# known: 185 lines — cohesive shared-upgrade orchestration (release fetch, tarball
+# known: 208 lines — cohesive shared-upgrade orchestration (release fetch, tarball
 # extraction, module/binary replacement, migrations, co-upgrade confirmation);
 # splitting would fragment one release flow across files for no clarity gain
 import json
@@ -55,6 +55,30 @@ def check_python_requires(requires: str) -> None:
     raise SystemExit(1)
 
 
+def _safe_extractall(tf: tarfile.TarFile, dest_dir: str) -> None:
+    """Extract `tf` into `dest_dir` with path-traversal protection on all Python versions.
+
+    Raises RuntimeError for any entry that would escape dest_dir.
+    On Python 3.12+ delegates to the built-in 'data' filter (wrapping FilterError).
+    On Python 3.9–3.11 validates member paths manually before extracting.
+    """
+    if sys.version_info >= (3, 12):
+        try:
+            tf.extractall(dest_dir, filter="data")
+        except tarfile.FilterError as e:
+            # normalise to RuntimeError so callers handle one exception type
+            raise RuntimeError(f"Unsafe tarball entry: {e}") from e
+        return
+    dest_real = os.path.realpath(dest_dir)
+    safe = []
+    for m in tf.getmembers():
+        target = os.path.realpath(os.path.join(dest_dir, m.name))
+        if not (target == dest_real or target.startswith(dest_real + os.sep)):
+            raise RuntimeError(f"Unsafe tarball entry: {m.name!r}")
+        safe.append(m)
+    tf.extractall(dest_dir, members=safe)
+
+
 def download_tarball(version: str, dest_dir: str) -> None:
     """Download and extract the release tarball for `version` into `dest_dir`.
 
@@ -67,11 +91,7 @@ def download_tarball(version: str, dest_dir: str) -> None:
          open(archive, "wb") as f:
         shutil.copyfileobj(resp, f)
     with tarfile.open(archive, "r:gz") as tf:
-        # filter='data' blocks path-traversal entries; available Python 3.12+
-        if sys.version_info >= (3, 12):
-            tf.extractall(dest_dir, filter="data")
-        else:
-            tf.extractall(dest_dir)
+        _safe_extractall(tf, dest_dir)
     os.remove(archive)
 
 
