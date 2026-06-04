@@ -1,14 +1,5 @@
 {% extends '@admin/default_frame.twig' %}
 
-{% block stylesheet %}
-    {{ parent() }}
-    <style>
-        /* EC-CUBE admin theme sets color:#fff on .badge; restore contrast for affected variants */
-        .badge-secondary { background-color: #6c757d !important; color: #fff !important; }
-        .badge-warning   { background-color: #ffc107 !important; color: #212529 !important; }
-    </style>
-{% endblock %}
-
 {% block title %}{{ 'eccube_fim.title'|trans }}{% endblock %}
 {% block sub_title %}{{ 'eccube_fim.title'|trans }}{% endblock %}
 
@@ -52,28 +43,28 @@
                         <div class="text-muted small mb-1">{{ 'eccube_fim.label.heartbeat'|trans }}</div>
                         {% if status.heartbeat.enabled %}
                             {% if status.heartbeat.health == 'OK' %}
-                                <span class="badge badge-success badge-pill">OK</span>
+                                <span class="badge badge-ec-green">OK</span>
                             {% elseif status.heartbeat.health == 'STALE' %}
-                                <span class="badge badge-warning badge-pill">STALE</span>
+                                <span class="badge badge-ec-yellow">STALE</span>
                             {% else %}
-                                <span class="badge badge-danger badge-pill">NOT FOUND</span>
+                                <span class="badge badge-ec-red">NOT FOUND</span>
                             {% endif %}
                             <br>
                             <small class="text-muted">
                                 {{ status.heartbeat.last_seen_fmt ?? '' }}
                             </small>
                         {% else %}
-                            <span class="badge badge-secondary badge-pill">{{ 'eccube_fim.label.disabled'|trans }}</span>
+                            <span class="badge badge-ec-glay">{{ 'eccube_fim.label.disabled'|trans }}</span>
                         {% endif %}
                     </div>
                     <div class="col-sm-4 mb-3">
                         <div class="text-muted small mb-1">{{ 'eccube_fim.label.suppressed_files'|trans }}</div>
                         {% if status.suppressed_count > 0 %}
-                            <span class="badge badge-warning badge-pill">
+                            <span class="badge badge-ec-yellow">
                                 {{ status.suppressed_count }} {{ 'eccube_fim.label.count_unit'|trans }}
                             </span>
                         {% else %}
-                            <span class="badge badge-secondary badge-pill">0 {{ 'eccube_fim.label.count_unit'|trans }}</span>
+                            <span class="badge badge-ec-glay">0 {{ 'eccube_fim.label.count_unit'|trans }}</span>
                         {% endif %}
                     </div>
                     <div class="col-sm-4 mb-3">
@@ -180,23 +171,23 @@
                         <div class="text-muted small mb-1">{{ 'eccube_fim.malware.label.scan_result'|trans }}</div>
                         {% set ss = malware_status.last_scan_status %}
                         {% if ss == 'clean' %}
-                            <span class="badge badge-success badge-pill">{{ 'eccube_fim.malware.status.clean'|trans }}</span>
+                            <span class="badge badge-ec-green">{{ 'eccube_fim.malware.status.clean'|trans }}</span>
                         {% elseif ss == 'infected' %}
-                            <span class="badge badge-danger badge-pill">
+                            <span class="badge badge-ec-red">
                                 {{ 'eccube_fim.malware.status.infected'|trans }}（{{ malware_status.last_scan_infected_count }}件）
                             </span>
                         {% elseif ss == 'error' %}
-                            <span class="badge badge-warning badge-pill">{{ 'eccube_fim.malware.status.error'|trans }}</span>
+                            <span class="badge badge-ec-yellow">{{ 'eccube_fim.malware.status.error'|trans }}</span>
                         {% else %}
-                            <span class="badge badge-secondary badge-pill">{{ 'eccube_fim.malware.status.never'|trans }}</span>
+                            <span class="badge badge-ec-glay">{{ 'eccube_fim.malware.status.never'|trans }}</span>
                         {% endif %}
                     </div>
                     <div class="col-sm-3 mb-3">
                         <div class="text-muted small mb-1">{{ 'eccube_fim.malware.label.suppressed'|trans }}</div>
                         {% if malware_status.suppressed_count > 0 %}
-                            <span class="badge badge-warning badge-pill">{{ malware_status.suppressed_count }} {{ 'eccube_fim.label.count_unit'|trans }}</span>
+                            <span class="badge badge-ec-yellow">{{ malware_status.suppressed_count }} {{ 'eccube_fim.label.count_unit'|trans }}</span>
                         {% else %}
-                            <span class="badge badge-secondary badge-pill">0 {{ 'eccube_fim.label.count_unit'|trans }}</span>
+                            <span class="badge badge-ec-glay">0 {{ 'eccube_fim.label.count_unit'|trans }}</span>
                         {% endif %}
                     </div>
                     <div class="col-sm-3 mb-3">
