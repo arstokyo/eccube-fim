@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=oneshot
-ExecStart=%%SBIN_DIR%%/eccube-malware
+ExecStart=%%SBIN_DIR%%/eccube-malware check
 User=root
 StandardOutput=journal
 StandardError=journal
